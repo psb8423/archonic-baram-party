@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>옛날바람 파티 매칭 시스템</title>
+    <style>
+        :root {
+            --bg-color: #121214;
+            --container-bg: #1e1e24;
+            --text-color: #e1e1e6;
+            --accent-color: #2f80ed;
+            --warning-color: #f2c94c;
+            --success-color: #27ae60;
+            --panel-bg: #1a1a20;
+        }
+        body {
+            background-color: var(--bg-color); color: var(--text-color);
+            font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 20px;
+        }
+        .container {
+            max-width: 1100px; margin: 0 auto;
+            background-color: var(--container-bg); padding: 25px;
+            border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        h1, h3 { text-align: center; color: #fff; margin-top: 0; }
+        
+        .main-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        /* 대기열 사이드바 */
+        .sidebar-queue {
+            background-color: var(--panel-bg); border: 1px solid #444;
+            border-radius: 6px; padding: 15px; max-height: 600px; overflow-y: auto;
+        }
+        .queue-list { display: flex; flex-direction: column; gap: 10px; }
+        
+        /* 📌 [1번 반영] X 버튼 배치를 위한 Flex 구조 변경 */
+        .queue-item {
+            background-color: #25252b; border-left: 4px solid var(--accent-color);
+            padding: 10px; border-radius: 4px; font-size: 13px; line-height: 1.4;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .queue-info { flex: 1; }
+        .cancel-btn {
+            background: none; border: none; color: #ff6b6b; font-weight: bold;
+            font-size: 16px; cursor: pointer; padding: 5px 10px; border-radius: 4px;
+        }
+        .cancel-btn:hover { background-color: rgba(255,107,107,0.1); }
+        
+        .empty-queue { text-align: center; color: #666; padding: 20px 0; font-size: 13px; }
+
+        /* 입력 폼 스타일 */
+        .form-content { display: flex; flex-direction: column; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+        
+        input[type="text"], input[type="number"], select {
+            width: 100%; padding: 10px; box-sizing: border-box;
+            background-color: #2d2d35; border: 1px solid #444; color: #fff; border-radius: 4px;
+        }
+        
+        .grid-4 { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1fr; gap: 10px; }
+        .checkbox-group {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+            background-color: #25252b; padding: 15px; border-radius: 4px; border: 1px solid #444;
+        }
+        .radio-inline { margin-right: 15px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        
+        button.submit-btn {
+            width: 100%; padding: 12px; background-color: var(--accent-color);
+            border: none; color: white; font-size: 16px; font-weight: bold;
+            border-radius: 4px; cursor: pointer; margin-top: 15px;
+        }
+        button.submit-btn:hover { opacity: 0.9; }
+        
+        .dynamic-panel { display: none; margin-top: 15px; padding: 15px; border: 1px solid #555; border-radius: 4px; background-color: var(--panel-bg); }
+        
+        /* 필터 인터페이스 스타일 */
+        .filter-box { border: 1px dashed var(--warning-color); padding: 15px; border-radius: 6px; margin-top: 20px; }
+        .filter-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 8px; }
+        .filter-input-wrapper { display: flex; align-items: center; gap: 5px; background-color: #2d2d35; padding: 2px 8px; border-radius: 4px; border: 1px solid #444; }
+        .filter-prefix { font-weight: bold; color: var(--warning-color); min-width: 35px; font-size: 13px; }
+        .filter-input-wrapper input { border: none; background: transparent; color: #fff; padding: 8px 0; width: 100%; text-align: right; }
+        .filter-input-wrapper input:focus { outline: none; }
+        .filter-suffix { color: #aaa; font-size: 13px; min-width: 45px; }
+        .filter-warning { color: var(--warning-color); font-weight: bold; font-size: 12px; margin-top: 10px; text-align: center; }
+
+        /* 📌 [2번 반영] 매칭 완료 전광판 섹션 추가 */
+        .match-success-section {
+            margin-top: 25px; background-color: var(--panel-bg); border: 1px solid var(--success-color);
+            padding: 15px; border-radius: 6px;
+        }
+        .match-card {
+            background-color: #25252b; border: 1px solid #444; padding: 12px; border-radius: 4px; margin-top: 10px;
+        }
+        .match-tag {
+            background-color: var(--success-color); color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🦅 옛날바람 파티 매칭 시스템</h1>
+    
+    <div class="main-layout">
+        
+        <div class="sidebar-queue">
+            <h3>👥 대기열 현황</h3>
+            <div id="queueList" class="queue-list">
+                <div class="empty-queue">대기 중인 인원이 없습니다.</div>
+            </div>
+        </div>
+
+        <div class="form-content">
+            <div class="grid-4">
+                <div class="form-group">
+                    <label>인게임 닉네임</label>
+                    <input type="text" id="userNick" placeholder="닉네임">
+                </div>
+                <div class="form-group">
+                    <label>직업</label>
+                    <select id="userJob">
+                        <option value="전사">전사</option>
+                        <option value="도적">도적</option>
+                        <option value="주술사">주술사</option>
+                        <option value="도사">도사</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>체력 (만)</label>
+                    <input type="number" id="userHp" placeholder="예: 227">
+                </div>
+                <div class="form-group">
+                    <label>마력 (만)</label>
+                    <input type="number" id="userMp" placeholder="예: 90">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 10px;">
+                <label>매칭 항목 선택 (대분류)</label>
+                <select id="mainCategory" onchange="togglePanels()">
+                    <option value="">-- 매칭 종류를 선택하세요 --</option>
+                    <option value="격도술">격도술</option>
+                    <option value="격도1대1">격도(1대1)</option>
+                    <option value="반반밀대">반반밀대</option>
+                    <option value="밀격쩔">밀격+쩔+밀대</option>
+                    <option value="흉가노노">흉가노노</option>
+                    <option value="차균">차균</option>
+                    <option value="레이드">레이드</option>
+                </select>
+            </div>
+
+            <div id="panelGyukdo" class="dynamic-panel">
+                <label>사냥터 선택 (중복 가능)</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" value="도삭산 900"> 도삭산 900</label>
+                    <label><input type="checkbox" value="높흉"> 높흉</label>
+                    <label><input type="checkbox" value="낮흉"> 낮흉</label>
+                    <label><input type="checkbox" value="선비"> 선비</label>
+                    <label><input type="checkbox" value="도삭산 800"> 도삭산 800</label>
+                </div>
+                <div class="grid-4" style="grid-template-columns: 1fr 1fr; margin-top: 15px;">
+                    <div>
+                        <label>경쿠 사용 여부</label>
+                        <label class="radio-inline"><input type="radio" name="expBuffA" value="O" checked> O</label>
+                        <label class="radio-inline"><input type="radio" name="expBuffA" value="X"> X</label>
+                    </div>
+                    <div>
+                        <label>밀대 진선 여부</label>
+                        <label class="radio-inline"><input type="radio" name="mildaeA" value="O"> O</label>
+                        <label class="radio-inline"><input type="radio" name="mildaeA" value="X" checked> X</label>
+                    </div>
+                </div>
+            </div>
+
+            <div id="panelMilgyeok" class="dynamic-panel">
+                <label>사냥터 선택 (중복 가능)</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" value="선비"> 선비</label>
+                    <label><input type="checkbox" value="높산적"> 높산적</label>
+                    <label><input type="checkbox" value="무사"> 무사</label>
+                    <label><input type="checkbox" value="선녀"> 선녀</label>
+                    <label><input type="checkbox" value="흉가"> 흉가</label>
+                </div>
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>역할 구분</label>
+                    <select id="subRole">
+                        <option value="밀격">밀격</option>
+                        <option value="쩔">쩔</option>
+                        <option value="밀대도사">밀대도사</option>
+                        <option value="반반">반반</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="panelHyungga" class="dynamic-panel">
+                <label>흉가노노 역할 구분</label>
+                <div style="background-color: #25252b; padding: 12px; border-radius: 4px; border: 1px solid #444;">
+                    <label class="radio-inline"><input type="radio" name="hyunggaRole" value="격수" checked> ⚔️ 격수 선택</label>
+                    <label class="radio-inline"><input type="radio" name="hyunggaRole" value="도사"> ☯️ 도사 선택</label>
+                </div>
+            </div>
+
+            <div id="panelChagyoon" class="dynamic-panel">
+                <label>차원 균열 단수 선택 (중복 가능)</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" value="40단 이하"> 40단 이하</label>
+                    <label><input type="checkbox" value="41단 이하"> 41단 이하</label>
+                    <label><input type="checkbox" value="50단 이상"> 50단 이상</label>
+                </div>
+            </div>
+
+            <div id="panelRaid" class="dynamic-panel" style="border-color: #eb5757;">
+                <label style="color: #eb5757;">레이드 보스 선택</label>
+                <div class="checkbox-group">
+                    <label><input type="radio" name="raidBoss" value="백호왕" checked> 백호왕</label>
+                    <label><input type="radio" name="raidBoss" value="해골왕"> 해골왕</label>
+                    <label><input type="radio" name="raidBoss" value="용왕"> 용왕</label>
+                </div>
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>파티 구성 방식</label>
+                    <select id="raidType">
+                        <option value="격도술">격도술 (소수 정예)</option>
+                        <option value="떼팟">떼팟 (조건: 도사 숫자 >= 격수 숫자)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-box">
+                <label>🔍 원하는 파티원 최소 스펙 필터</label>
+                <div class="filter-grid">
+                    <div class="filter-input-wrapper"><span class="filter-prefix">격수</span><input type="number" id="filterHp" placeholder="0"><span class="filter-suffix">만 이상</span></div>
+                    <div class="filter-input-wrapper"><span class="filter-prefix">술사</span><input type="number" id="filterHyeonjaMp" placeholder="0"><span class="filter-suffix">만 이상</span></div>
+                    <div class="filter-input-wrapper"><span class="filter-prefix">도사</span><input type="number" id="filterDosaMp" placeholder="0"><span class="filter-suffix">만 이상</span></div>
+                </div>
+                <div class="filter-warning">※ 필터 설정 시 파티 매칭이 느려질 수 있으니 주의 바랍니다.</div>
+            </div>
+
+            <button class="submit-btn" onclick="registerUser()">파티 대기열 등록</button>
+
+            <div class="match-success-section">
+                <h3>🎉 매칭 완료된 파티</h3>
+                <div id="matchSuccessList">
+                    <div style="text-align: center; color: #666; font-size: 13px; padding: 10px 0;">아직 매칭된 파티가 없습니다.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let waitingQueue = [];
+    let matchedParties = []; 
+//🎵 매칭 완료 알림음 추가 (Mixkit 무료 효과음 URL)
+const dingDongSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav');// 매칭 성공 데이터 저장 배열
+
+    function togglePanels() {
+        const category = document.getElementById('mainCategory').value;
+        document.getElementById('panelGyukdo').style.display = 'none';
+        document.getElementById('panelMilgyeok').style.display = 'none';
+        document.getElementById('panelHyungga').style.display = 'none';
+        document.getElementById('panelChagyoon').style.display = 'none';
+        document.getElementById('panelRaid').style.display = 'none';
+
+        if (category === '격도술' || category === '격도1대1') document.getElementById('panelGyukdo').style.display = 'block';
+        else if (category === '반반밀대' || category === '밀격쩔') document.getElementById('panelMilgyeok').style.display = 'block';
+        else if (category === '흉가노노') document.getElementById('panelHyungga').style.display = 'block';
+        else if (category === '차균') document.getElementById('panelChagyoon').style.display = 'block';
+        else if (category === '레이드') document.getElementById('panelRaid').style.display = 'block';
+    }
+
+    function registerUser() {
+        const nick = document.getElementById('userNick').value.trim();
+        if(!nick) { alert("닉네임을 입력해주세요."); return; }
+
+        const job = document.getElementById('userJob').value;
+        const hp = document.getElementById('userHp').value || '0';
+        const mp = document.getElementById('userMp').value || '0';
+        const category = document.getElementById('mainCategory').value;
+        
+        if(!category) { alert("매칭 항목을 선택해주세요."); return; }
+
+        let details = [];
+        
+        if (category === '격도술' || category === '격도1대1') {
+            document.querySelectorAll('#panelGyukdo input[type="checkbox"]:checked').forEach(cb => details.push(cb.value));
+            if(details.length === 0) { alert("사냥터를 하나 이상 선택해주세요."); return; }
+        } else if (category === '반반밀대' || category === '밀격쩔') {
+            document.querySelectorAll('#panelMilgyeok input[type="checkbox"]:checked').forEach(cb => details.push(cb.value));
+            if(details.length === 0) { alert("사냥터를 하나 이상 선택해주세요."); return; }
+            details.push(document.getElementById('subRole').value);
+        } else if (category === '흉가노노') {
+            details.push(document.querySelector('input[name="hyunggaRole"]:checked').value);
+        } else if (category === '차균') {
+            document.querySelectorAll('#panelChagyoon input[type="checkbox"]:checked').forEach(cb => details.push(cb.value));
+            if(details.length === 0) { alert("단수를 선택해주세요."); return; }
+        } else if (category === '레이드') {
+            details.push(`${document.querySelector('input[name="raidBoss"]:checked').value}(${document.getElementById('raidType').value})`);
+        }
+
+        const userData = { nick, job, hp, mp, category, detailsStr: details.join(', ') };
+        waitingQueue.push(userData);
+        
+        // 📌 등록 후 자동 3인 매칭 시스템 로직 가동
+        checkAndMatchParty(category);
+        
+        updateQueueDisplay();
+        document.getElementById('userNick').value = '';
+    }
+
+    // 📌 [1번 반영] 특정 대기자 제거 취소 함수
+    function cancelQueue(index) {
+        waitingQueue.splice(index, 1);
+        updateQueueDisplay();
+    }
+
+    // 📌 [2번 반영] 3인 매칭 체크 엔진 (동일 카테고리 3명 모이면 결성)
+    function checkAndMatchParty(category) {
+        // 같은 카테고리를 고른 대기자만 필터링
+        const sameCategoryUsers = waitingQueue.filter(u => u.category === category);
+        
+        // 3명이 조율되면 파티 결성 성공 처리!
+        if (sameCategoryUsers.length >= 3) {
+            const partyMembers = sameCategoryUsers.slice(0, 3);
+            
+            // 대기열 메인 배열에서 매칭된 유저 3명 제외(삭제) 처리
+            waitingQueue = waitingQueue.filter(u => !partyMembers.includes(u));
+            
+            // 매칭 성공 리스트에 데이터 바인딩
+            matchedParties.push({
+                category: category,
+                members: partyMembers
+            });
+dingDongSound.play().catch(error => {
+        console.log("자동 재생이 차단되었습니다. 화면을 먼저 클릭해주세요:", error);
+    });
+    
+    alert(`🎉 [${category}] 3인 파티 매칭이 성공적으로 완료되었습니다!`);
+    updateMatchedDisplay();
+}
+            
+            alert(`🎉 [${category}] 3인 파티 매칭이 성공적으로 완료되었습니다!`);
+            updateMatchedDisplay();
+        }
+    }
+
+    function updateQueueDisplay() {
+        const queueList = document.getElementById('queueList');
+        queueList.innerHTML = '';
+
+        if(waitingQueue.length === 0) {
+            queueList.innerHTML = '<div class="empty-queue">대기 중인 인원이 없습니다.</div>';
+            return;
+        }
+
+        waitingQueue.forEach((u, index) => {
+            const item = document.createElement('div');
+            item.className = 'queue-item';
+            item.innerHTML = `
+                <div class="queue-info">
+                    <strong>${u.nick}</strong> [${u.job}] ${u.hp}만/${u.mp}만<br>
+                    <span style="color:var(--warning-color); font-size:12px;">➔ ${u.category} (${u.detailsStr})</span>
+                </div>
+                <button class="cancel-btn" onclick="cancelQueue(${index})">×</button>
+            `;
+            queueList.appendChild(item);
+        });
+    }
+
+    // 📌 [2번 반영] 매칭 성공 전광판 갱신 함수
+    function updateMatchedDisplay() {
+        const matchDisplay = document.getElementById('matchSuccessList');
+        matchDisplay.innerHTML = '';
+
+        if (matchedParties.length === 0) {
+            matchDisplay.innerHTML = '<div style="text-align: center; color: #666; font-size: 13px; padding: 10px 0;">아직 매칭된 파티가 없습니다.</div>';
+            return;
+        }
+
+        matchedParties.forEach(party => {
+            const card = document.createElement('div');
+            card.className = 'match-card';
+            
+            const memberNames = party.members.map(m => `${m.nick}(${m.job})`).join(', ');
+            
+            card.innerHTML = `
+                <div style="margin-bottom: 5px;"><span class="match-tag">${party.category}</span> <span style="font-size:12px; color:#aaa;">파티 결성 완료</span></div>
+                <div style="font-size: 14px; color: #fff; font-weight: bold;">👥 구성원: ${memberNames}</div>
+                <div style="font-size: 12px; color: #888; margin-top: 3px;">세부 조건: ${party.members[0].detailsStr}</div>
+            `;
+            matchDisplay.appendChild(card);
+        });
+    }
+</script>
+
+</body>
+</html>
