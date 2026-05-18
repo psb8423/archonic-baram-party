@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gugi&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
 :root{
   --ink:#0e0d0b;            /* 먹색 배경 */
@@ -69,6 +71,16 @@ body::before{
   content:"";display:block;width:64px;height:2px;margin:14px auto 0;
   background:linear-gradient(90deg,transparent,var(--gold),transparent);
 }
+.conn{
+  display:inline-flex;align-items:center;gap:7px;margin-top:14px;
+  font-size:12px;color:var(--paper-faint);
+  font-family:'Gowun Batang',serif;letter-spacing:.04em;
+}
+.conn .dot{width:7px;height:7px;border-radius:50%;background:var(--paper-faint);transition:background .3s,box-shadow .3s;}
+.conn.live .dot{background:var(--jade);box-shadow:0 0 8px var(--jade);}
+.conn.live{color:var(--jade);}
+.conn.down .dot{background:var(--cinnabar);box-shadow:0 0 8px var(--cinnabar);}
+.conn.down{color:var(--cinnabar);}
 
 /* ── 레이아웃 ── */
 .grid{display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;}
@@ -285,6 +297,7 @@ input::placeholder{color:var(--paper-faint);}
     <div class="crest">🦅</div>
     <h1>옛날바람 파티 매칭소</h1>
     <div class="sub">Archonic · Baram</div>
+    <div class="conn" id="connState"><span class="dot"></span><span id="connText">서버 연결 중…</span></div>
   </header>
 
   <div class="grid">
@@ -473,20 +486,49 @@ input::placeholder{color:var(--paper-faint);}
 
 <script>
 const JOB_COLORS={전사:'var(--job-jeon)',도적:'var(--job-do)',주술사:'var(--job-ju)',도사:'var(--job-dosa)'};
-const STORE_KEY='archonic_baram_match_v2';
+
+/* ── Firebase 설정 ── */
+const firebaseConfig={
+  apiKey:"AIzaSyAHjDQPwU2BTdFEQvGeVu8Ui9ntKFqBr6Q",
+  authDomain:"archonic-baram-party.firebaseapp.com",
+  databaseURL:"https://archonic-baram-party-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"archonic-baram-party",
+  storageBucket:"archonic-baram-party.firebasestorage.app",
+  messagingSenderId:"192279783273",
+  appId:"1:192279783273:web:0a9b17d589adc830d27ff8"
+};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+const queueRef=db.ref('queue');     // 대기열
+const matchRef=db.ref('matched');   // 매칭 완료 (최근 30건만 유지)
+const MATCH_KEEP=30;
 
 let waitingQueue=[];
 let matchedParties=[];
 
-/* ── 영속성 ── */
-function saveState(){
-  try{localStorage.setItem(STORE_KEY,JSON.stringify({q:waitingQueue,m:matchedParties}));}catch(e){}
-}
-function loadState(){
-  try{
-    const r=localStorage.getItem(STORE_KEY);
-    if(r){const d=JSON.parse(r);waitingQueue=d.q||[];matchedParties=d.m||[];}
-  }catch(e){}
+/* ── 연결 상태 표시 ── */
+db.ref('.info/connected').on('value',s=>{
+  const box=document.getElementById('connState');
+  const txt=document.getElementById('connText');
+  if(s.val()===true){box.className='conn live';txt.textContent='실시간 연결됨 · 문파 공유 중';}
+  else{box.className='conn down';txt.textContent='서버 연결 끊김 · 재연결 시도 중';}
+});
+
+/* ── Firebase 구독: 큐/매칭이 바뀌면 모든 사람 화면 자동 갱신 ── */
+function subscribe(){
+  queueRef.on('value',snap=>{
+    const v=snap.val();
+    waitingQueue=v?Object.keys(v).map(k=>({_id:k,...v[k]})):[];
+    updateQueueDisplay();
+    tryAutoMatch();   // 큐가 바뀔 때마다 매칭 가능 여부 확인
+  });
+  matchRef.on('value',snap=>{
+    const v=snap.val();
+    let arr=v?Object.keys(v).map(k=>({_id:k,...v[k]})):[];
+    arr.sort((a,b)=>(b.ts||0)-(a.ts||0));   // 최신순
+    matchedParties=arr;
+    updateMatchedDisplay();
+  });
 }
 
 /* ── 토스트 (alert 대체) ── */
@@ -595,41 +637,86 @@ function registerUser(){
     detailsStr:details.length?details.join(', '):huntingGrounds.join(', ')
   });
 
-  toast(`<b>${nick}</b> 님, 대기열에 등록되었습니다.`,'info');
-  checkAndMatchParty(category);
-  updateQueueDisplay();
-  saveState();
+  // 화면에 직접 쓰지 않고 Firebase에만 기록 → 구독 콜백이 모두의 화면을 갱신
+  const entry={nick,job,hp,mp,category,huntingGrounds,expBuff,mildae,raidBoss,raidType,hyunggaRole,
+    detailsStr:details.length?details.join(', '):huntingGrounds.join(', '),
+    ts:firebase.database.ServerValue.TIMESTAMP};
+  queueRef.push(entry)
+    .then(()=>toast(`<b>${nick}</b> 님, 대기열에 등록되었습니다.`,'info'))
+    .catch(()=>toast('등록 실패 — 서버 연결을 확인해주세요.','warn'));
   document.getElementById('userNick').value='';
 }
 
-function cancelQueue(i){
-  const u=waitingQueue[i];
-  waitingQueue.splice(i,1);
-  updateQueueDisplay();saveState();
-  if(u)toast(`<b>${u.nick}</b> 님의 대기를 취소했습니다.`,'info');
+function cancelQueue(id){
+  const u=waitingQueue.find(x=>x._id===id);
+  queueRef.child(id).remove()
+    .then(()=>{if(u)toast(`<b>${u.nick}</b> 님의 대기를 취소했습니다.`,'info');})
+    .catch(()=>toast('취소 실패 — 서버 연결을 확인해주세요.','warn'));
 }
 
-/* ── 매칭 알고리즘 (원본 로직 유지) ── */
-function checkAndMatchParty(category){
-  if(category==='격도1대1'){
-    const pool=waitingQueue.filter(u=>u.category==='격도1대1');
-    const a=pool.find(u=>u.job!=='도사'),d=pool.find(u=>u.job==='도사');
-    if(a&&d){const pm=[a,d];waitingQueue=waitingQueue.filter(u=>!pm.includes(u));
-      createMatchedParty('격도(1대1)',pm,a.huntingGrounds.filter(g=>d.huntingGrounds.includes(g)));}
-  }else if(category==='흉가노노'){
-    const pool=waitingQueue.filter(u=>u.category==='흉가노노');
-    const a=pool.find(u=>u.hyunggaRole==='격수'),d=pool.find(u=>u.hyunggaRole==='도사');
-    if(a&&d){const pm=[a,d];waitingQueue=waitingQueue.filter(u=>!pm.includes(u));
-      createMatchedParty('흉가노노',pm);}
-  }else if(category==='레이드'){
-    const pool=waitingQueue.filter(u=>u.category==='레이드');
+/* ── 자동 매칭 (트랜잭션으로 동시성 보호) ──
+   큐가 바뀔 때마다 호출. 트랜잭션 안에서 매칭 가능한 파티를 찾아
+   해당 인원을 큐에서 제거. 동시에 여러 명이 돌려도 중복 결성 안 됨. */
+let pendingParty=null;
+function tryAutoMatch(){
+  queueRef.transaction(current=>{
+    if(!current){pendingParty=null;return current;}
+    const list=Object.keys(current).map(k=>({_id:k,...current[k]}));
+    const result=findParty(list);
+    if(!result){pendingParty=null;return current;}        // 매칭 없음 → 큐 그대로
+    pendingParty=result;                                  // 결성 정보 보관
+    result.members.forEach(m=>{delete current[m._id];});  // 결성 인원만 큐에서 제거
+    return current;
+  },(err,committed)=>{
+    if(err||!committed||!pendingParty)return;
+    const p=pendingParty;pendingParty=null;
+    const n=new Date();
+    const rec={
+      category:p.displayCategory,
+      members:p.members.map(({_id,ts,...rest})=>rest),
+      matchTime:`${n.getHours()}:${String(n.getMinutes()).padStart(2,'0')}`,
+      commonGrounds:p.commonGrounds||[],
+      ts:Date.now()
+    };
+    // 매칭 결과 기록 + 오래된 항목 정리
+    matchRef.push(rec).then(()=>{
+      matchRef.orderByChild('ts').once('value',s=>{
+        const all=[];s.forEach(c=>all.push({k:c.key,ts:c.val().ts||0}));
+        all.sort((a,b)=>a.ts-b.ts);
+        const over=all.length-MATCH_KEEP;
+        for(let i=0;i<over;i++)matchRef.child(all[i].k).remove();
+      });
+    });
+    playMatchSound();
+    toast(`<b>[${p.displayCategory}]</b> 파티 매칭 완료!`,'win');
+  });
+}
+
+/* ── 매칭 알고리즘 (원본 로직 유지, 순수 함수화) ──
+   list(현재 큐 배열)를 받아 결성 가능한 파티 1건을 반환하거나 null */
+function findParty(list){
+  // 1) 격도 1대1
+  {
+    const pool=list.filter(u=>u.category==='격도1대1');
+    const a=pool.find(u=>u.job!=='도사'),d=pool.find(u=>u.job==='도사'&&u!==a);
+    if(a&&d)return{displayCategory:'격도(1대1)',members:[a,d],
+      commonGrounds:(a.huntingGrounds||[]).filter(g=>(d.huntingGrounds||[]).includes(g))};
+  }
+  // 2) 흉가노노
+  {
+    const pool=list.filter(u=>u.category==='흉가노노');
+    const a=pool.find(u=>u.hyunggaRole==='격수'),d=pool.find(u=>u.hyunggaRole==='도사'&&u!==a);
+    if(a&&d)return{displayCategory:'흉가노노',members:[a,d],commonGrounds:[]};
+  }
+  // 3) 레이드
+  {
+    const pool=list.filter(u=>u.category==='레이드');
     const pairs=[];
     pool.forEach(u=>{if(!pairs.some(p=>p.boss===u.raidBoss&&p.type===u.raidType))pairs.push({boss:u.raidBoss,type:u.raidType});});
     for(const pr of pairs){
       const sp=pool.filter(u=>u.raidBoss===pr.boss&&u.raidType===pr.type);
       if(pr.type==='격도술'){
-        if(sp.length>=3){const pm=sp.slice(0,3);waitingQueue=waitingQueue.filter(u=>!pm.includes(u));
-          createMatchedParty(`레이드-${pr.boss}(격도술)`,pm);break;}
+        if(sp.length>=3)return{displayCategory:`레이드-${pr.boss}(격도술)`,members:sp.slice(0,3),commonGrounds:[]};
       }else if(pr.type==='떼팟'){
         let sel=[],ac=0;
         for(const u of sp){
@@ -637,32 +724,25 @@ function checkAndMatchParty(category){
           else if(ac<5){sel.push(u);ac++;}
           if(sel.length===10)break;
         }
-        if(sel.length===10){waitingQueue=waitingQueue.filter(u=>!sel.includes(u));
-          createMatchedParty(`레이드-${pr.boss}(떼팟)`,sel);break;}
+        if(sel.length===10)return{displayCategory:`레이드-${pr.boss}(떼팟)`,members:sel,commonGrounds:[]};
       }
     }
-  }else{
-    const same=waitingQueue.filter(u=>u.category===category);
-    if(same.length>=3){
-      const pm=same.slice(0,3);waitingQueue=waitingQueue.filter(u=>!pm.includes(u));
-      let cg=[];
-      if(pm[0].huntingGrounds&&pm[0].huntingGrounds.length)
-        cg=pm[0].huntingGrounds.filter(g=>pm[1].huntingGrounds.includes(g)&&pm[2].huntingGrounds.includes(g));
-      createMatchedParty(category,pm,cg);
+  }
+  // 4) 공통 3인 (격도술, 반반밀대, 밀격쩔, 차균)
+  {
+    const cats=['격도술','반반밀대','밀격쩔','차균'];
+    for(const cat of cats){
+      const same=list.filter(u=>u.category===cat);
+      if(same.length>=3){
+        const pm=same.slice(0,3);
+        let cg=[];
+        if(pm[0].huntingGrounds&&pm[0].huntingGrounds.length)
+          cg=pm[0].huntingGrounds.filter(g=>(pm[1].huntingGrounds||[]).includes(g)&&(pm[2].huntingGrounds||[]).includes(g));
+        return{displayCategory:cat,members:pm,commonGrounds:cg};
+      }
     }
   }
-}
-
-function createMatchedParty(displayCategory,pm,cg=[]){
-  const n=new Date();
-  matchedParties.unshift({
-    category:displayCategory,members:pm,
-    matchTime:`${n.getHours()}:${String(n.getMinutes()).padStart(2,'0')}`,
-    commonGrounds:cg
-  });
-  playMatchSound();
-  toast(`<b>[${displayCategory}]</b> 파티 매칭 완료!`,'win');
-  updateMatchedDisplay();
+  return null;
 }
 
 /* ── 렌더 ── */
@@ -688,7 +768,7 @@ function updateQueueDisplay(){
         <div class="stat">체력 ${u.hp}만 · 마력 ${u.mp}만</div>
         <div class="mode">➔ ${u.category} <span style="color:var(--paper-faint);">[${sub}]</span></div>
       </div>
-      <button class="x-btn" onclick="cancelQueue(${i})" title="대기 취소">×</button>`;
+      <button class="x-btn" onclick="cancelQueue('${u._id}')" title="대기 취소">×</button>`;
     L.appendChild(d);
   });
 }
@@ -722,11 +802,11 @@ function updateMatchedDisplay(){
 }
 
 /* ── 초기화 ── */
-loadState();
 initBindings();
 syncJobColor();
 updateQueueDisplay();
 updateMatchedDisplay();
+subscribe();   // Firebase 실시간 구독 시작
 </script>
 </body>
 </html>
