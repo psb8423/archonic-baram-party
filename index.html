@@ -270,32 +270,37 @@
     let waitingQueue = [];
     let matchedParties = []; 
     
-    // 🎵 브라우저 내장 주파수 합성(Web Audio API)으로 100% 신뢰성 있는 딩동 소리 구현
+    // 🎵 브라우저 내장 주파수 합성(Web Audio API) 오디오 재생 강화판
     function playMatchSound() {
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (!AudioContext) return;
             const ctx = new AudioContext();
             
+            // 브라우저 잠금 상태 강제 해제 (resume)
+            if (ctx.state === 'suspended') {
+                ctx.resume();
+            }
+            
             // 첫 번째 솔 음 (딩~)
             const osc1 = ctx.createOscillator();
             const gain1 = ctx.createGain();
             osc1.type = 'sine';
             osc1.frequency.setValueAtTime(392.00, ctx.currentTime); // G4
-            gain1.gain.setValueAtTime(0.2, ctx.currentTime);
-            gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+            gain1.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
             osc1.connect(gain1); gain1.connect(ctx.destination);
-            osc1.start(); osc1.stop(ctx.currentTime + 0.3);
+            osc1.start(); osc1.stop(ctx.currentTime + 0.4);
             
-            // 두 번째 미 음 (동~) 0.15초 뒤 스타트
+            // 두 번째 미 음 (동~) 0.18초 뒤 스타트
             const osc2 = ctx.createOscillator();
             const gain2 = ctx.createGain();
             osc2.type = 'sine';
-            osc2.frequency.setValueAtTime(329.63, ctx.currentTime + 0.15); // E4
-            gain2.gain.setValueAtTime(0.2, ctx.currentTime + 0.15);
-            gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+            osc2.frequency.setValueAtTime(329.63, ctx.currentTime + 0.18); // E4
+            gain2.gain.setValueAtTime(0.3, ctx.currentTime + 0.18);
+            gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
             osc2.connect(gain2); gain2.connect(ctx.destination);
-            osc2.start(ctx.currentTime + 0.15); osc2.stop(ctx.currentTime + 0.5);
+            osc2.start(ctx.currentTime + 0.18); osc2.stop(ctx.currentTime + 0.6);
         } catch (e) {
             console.log("오디오 플레이 에러 방지:", e);
         }
@@ -339,6 +344,10 @@
         let mildae = 'X';
         let details = [];
         
+        let raidBoss = '';
+        let raidType = '';
+        let hyunggaRole = '';
+        
         if (category === '격도술' || category === '격도1대1') {
             document.querySelectorAll('#panelGyukdo input[type="checkbox"]:checked').forEach(cb => huntingGrounds.push(cb.value));
             if(huntingGrounds.length === 0) { alert("사냥터를 하나 이상 선택해주세요."); return; }
@@ -351,20 +360,21 @@
             const role = document.getElementById('subRole').value;
             details.push(`역할:${role}`);
         } else if (category === '흉가노노') {
-            const hRole = document.querySelector('input[name="hyunggaRole"]:checked').value;
-            details.push(`역할:${hRole}`);
+            hyunggaRole = document.querySelector('input[name="hyunggaRole"]:checked').value;
+            details.push(`역할:${hyunggaRole}`);
         } else if (category === '차균') {
             document.querySelectorAll('#panelChagyoon input[type="checkbox"]:checked').forEach(cb => huntingGrounds.push(cb.value));
             if(huntingGrounds.length === 0) { alert("단수를 선택해주세요."); return; }
         } else if (category === '레이드') {
-            const boss = document.querySelector('input[name="raidBoss"]:checked').value;
-            const rType = document.getElementById('raidType').value;
-            details.push(`보스:${boss}`, `방식:${rType}`);
+            raidBoss = document.querySelector('input[name="raidBoss"]:checked').value;
+            raidType = document.getElementById('raidType').value;
+            details.push(`보스:${raidBoss}`, `방식:${raidType}`);
         }
 
         const userData = { 
             nick, job, hp, mp, category, 
             huntingGrounds, expBuff, mildae,
+            raidBoss, raidType, hyunggaRole,
             detailsStr: details.length > 0 ? details.join(', ') : huntingGrounds.join(', ')
         };
         
@@ -381,37 +391,116 @@
     }
 
     function checkAndMatchParty(category) {
-        const sameCategoryUsers = waitingQueue.filter(u => u.category === category);
-        
-        if (sameCategoryUsers.length >= 3) {
-            const partyMembers = sameCategoryUsers.slice(0, 3);
-            waitingQueue = waitingQueue.filter(u => !partyMembers.includes(u));
+        // 1. 격도 1대1 매칭 알고리즘 (2인: 격수계열 1 + 도사 1)
+        if (category === '격도1대1') {
+            const pool = waitingQueue.filter(u => u.category === '격도1대1');
+            const attacker = pool.find(u => u.job !== '도사');
+            const dosa = pool.find(u => u.job === '도사');
             
-            const now = new Date();
-            const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
-            
-            // 1. 3명 모두 공통 선택한 사냥터(교집합) 계산
-            let commonGrounds = [];
-            if (partyMembers[0].huntingGrounds && partyMembers[0].huntingGrounds.length > 0) {
-                commonGrounds = partyMembers[0].huntingGrounds.filter(g => 
-                    partyMembers[1].huntingGrounds.includes(g) && 
-                    partyMembers[2].huntingGrounds.includes(g)
-                );
+            if (attacker && dosa) {
+                const partyMembers = [attacker, dosa];
+                waitingQueue = waitingQueue.filter(u => !partyMembers.includes(u));
+                createMatchedParty('격도(1대1)', partyMembers, attacker.huntingGrounds.filter(g => dosa.huntingGrounds.includes(g)));
             }
-
-            matchedParties.push({
-                category: category,
-                members: partyMembers,
-                matchTime: timeStr,
-                commonGrounds: commonGrounds
-            });
-
-            // 효과음 실행 함수 호출
-            playMatchSound();
+        } 
+        // 2. 흉가노노 매칭 알고리즘 (2인: 역할 격수 1 + 역할 도사 1)
+        else if (category === '흉가노노') {
+            const pool = waitingQueue.filter(u => u.category === '흉가노노');
+            const attacker = pool.find(u => u.hyunggaRole === '격수');
+            const dosa = pool.find(u => u.hyunggaRole === '도사');
             
-            alert(`🎉 [${category}] 3인 파티 매칭이 성공적으로 완료되었습니다!`);
-            updateMatchedDisplay();
+            if (attacker && dosa) {
+                const partyMembers = [attacker, dosa];
+                waitingQueue = waitingQueue.filter(u => !partyMembers.includes(u));
+                createMatchedParty('흉가노노', partyMembers);
+            }
         }
+        // 3. 레이드 매칭 알고리즘 (격도술 3인 / 떼팟 10인)
+        else if (category === '레이드') {
+            const pool = waitingQueue.filter(u => u.category === '레이드');
+            
+            // 등록된 보스 및 파티방식 종류 추출
+            const uniquePairs = [];
+            pool.forEach(u => {
+                if (!uniquePairs.some(p => p.boss === u.raidBoss && p.type === u.raidType)) {
+                    uniquePairs.push({ boss: u.raidBoss, type: u.raidType });
+                }
+            });
+            
+            for (const pair of uniquePairs) {
+                const subPool = pool.filter(u => u.raidBoss === pair.boss && u.raidType === pair.type);
+                
+                if (pair.type === '격도술') {
+                    if (subPool.length >= 3) {
+                        const partyMembers = subPool.slice(0, 3);
+                        waitingQueue = waitingQueue.filter(u => !partyMembers.includes(u));
+                        createMatchedParty(`레이드-${pair.boss}(격도술)`, partyMembers);
+                        break;
+                    }
+                } 
+                // 떼팟 10인 알고리즘: 도사 >= 격수 조율 (격수 최대 5명 제한 큐빌딩)
+                else if (pair.type === '떼팟') {
+                    let selected = [];
+                    let attackerCount = 0;
+                    
+                    for (const u of subPool) {
+                        if (u.job === '도사') {
+                            selected.push(u);
+                        } else {
+                            // 격수가 5명 미만일 때만 수집, 5명 찼으면 순서가 일찍이라도 누락(후순위 토스)
+                            if (attackerCount < 5) {
+                                selected.push(u);
+                                attackerCount++;
+                            }
+                        }
+                        if (selected.length === 10) break;
+                    }
+                    
+                    // 조건에 완벽히 맞는 10인 스쿼드가 완성되었을 때만 파티 결성
+                    if (selected.length === 10) {
+                        waitingQueue = waitingQueue.filter(u => !selected.includes(u));
+                        createMatchedParty(`레이드-${pair.boss}(떼팟)`, selected);
+                        break;
+                    }
+                }
+            }
+        }
+        // 4. 기존 공통 3인 매칭 알고리즘 (격도술, 반반밀대, 밀격쩔, 차균)
+        else {
+            const sameCategoryUsers = waitingQueue.filter(u => u.category === category);
+            
+            if (sameCategoryUsers.length >= 3) {
+                const partyMembers = sameCategoryUsers.slice(0, 3);
+                waitingQueue = waitingQueue.filter(u => !partyMembers.includes(u));
+                
+                let commonGrounds = [];
+                if (partyMembers[0].huntingGrounds && partyMembers[0].huntingGrounds.length > 0) {
+                    commonGrounds = partyMembers[0].huntingGrounds.filter(g => 
+                        partyMembers[1].huntingGrounds.includes(g) && 
+                        partyMembers[2].huntingGrounds.includes(g)
+                    );
+                }
+                
+                createMatchedParty(category, partyMembers, commonGrounds);
+            }
+        }
+    }
+
+    // 파티 생성 공통 랩퍼 함수
+    function createMatchedParty(displayCategory, partyMembers, commonGrounds = []) {
+        const now = new Date();
+        const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+        
+        matchedParties.push({
+            category: displayCategory,
+            members: partyMembers,
+            matchTime: timeStr,
+            commonGrounds: commonGrounds
+        });
+
+        playMatchSound();
+        alert(`🎉 [${displayCategory}] 파티 매칭이 완료되었습니다!`);
+        updateMatchedDisplay();
     }
 
     function updateQueueDisplay() {
@@ -428,7 +517,7 @@
             item.className = 'queue-item';
             
             let displaySubInfo = u.detailsStr;
-            if (u.huntingGrounds.length > 0) {
+            if (u.huntingGrounds && u.huntingGrounds.length > 0) {
                 displaySubInfo = `사냥터: ${u.huntingGrounds.join(', ')}` + (u.detailsStr ? ` (${u.detailsStr})` : '');
             }
 
@@ -458,31 +547,31 @@
             
             const memberNames = party.members.map(m => `${m.nick}(${m.job})`).join(', ');
             
-            // 목적지 텍스트 파싱 (공통 사냥터 여부)
-            let destinationText = "지정 사냥터 없음 (기타 항목)";
-            if (party.category === '격도술' || party.category === '격도1대1' || party.category === '반반밀대' || party.category === '밀격쩔') {
-                destinationText = party.commonGrounds.length > 0 
-                    ? `📍 목적지 사냥터: <span class="match-dest">${party.commonGrounds.join(', ')}</span>`
-                    : `📍 목적지 사냥터: <span style="color:#ff6b6b;">공통 사냥터 없음 (중간지점 조율 필요)</span>`;
+            // 목적지 사냥터 판단 로직 (공통 분모 추출)
+            let destinationText = "";
+            if (party.commonGrounds && party.commonGrounds.length > 0) {
+                destinationText = `📍 목적지 사냥터: <span class="match-dest">${party.commonGrounds.join(', ')}</span>`;
+            } else if (party.category.includes('격도술') || party.category.includes('반반밀대') || party.category.includes('밀격쩔')) {
+                destinationText = `📍 목적지 사냥터: <span style="color:#ff6b6b;">공통 사냥터 없음 (중간지점 조율 필요)</span>`;
             } else {
-                destinationText = `📍 선택 항목: <span class="match-dest">${party.members[0].detailsStr || '기본 진행'}</span>`;
+                destinationText = `📍 설정 세부사항: <span class="match-dest">${party.members[0].detailsStr || '기본 조건 진행'}</span>`;
             }
 
-            // 2. 경쿠 사용자 명단 추출
+            // 경쿠 사용자 명단 파싱
             const expUsers = party.members.filter(m => m.expBuff === 'O').map(m => m.nick);
             const expUsersStr = expUsers.length > 0 ? `${expUsers.join(', ')}` : '없음';
 
-            // 3. 밀대 진선 고용 요청 유저 확인 및 표시
+            // 밀대 진선 고용 명단 파싱
             const mildaeUsers = party.members.filter(m => m.mildae === 'O').map(m => m.nick);
             const mildaeStr = mildaeUsers.length > 0 ? `O (요청자: ${mildaeUsers.join(', ')})` : 'X';
             
             card.innerHTML = `
                 <div style="margin-bottom: 6px;">
                     <span class="match-tag">${party.category}</span> 
-                    <span style="font-size:11px; color:#aaa; margin-left:5px;">(${party.matchTime} 올림)</span>
-                    <span style="font-size:12px; color:#27ae60; font-weight:bold; margin-left:5px;">파티 결성 완료</span>
+                    <span style="font-size:11px; color:#aaa; margin-left:5px;">(${party.matchTime} 결성)</span>
+                    <span style="font-size:12px; color:#27ae60; font-weight:bold; margin-left:5px;">● 파티결성 완료</span>
                 </div>
-                <div style="font-size: 14px; color: #fff; font-weight: bold; margin-bottom: 4px;">👥 구성원: ${memberNames}</div>
+                <div style="font-size: 14px; color: #fff; font-weight: bold; margin-bottom: 4px;">👥 구성원 [총 ${party.members.length}명]: ${memberNames}</div>
                 <div style="font-size: 13px; margin-bottom: 4px;">${destinationText}</div>
                 <div style="font-size: 12px; color: #bbb; border-top: 1px dashed #444; padding-top: 4px; margin-top: 4px;">
                     ⚡ 세부 조건 ➔ [경쿠 사용자]: ${expUsersStr} | [밀대 진선 고용]: ${mildaeStr}
