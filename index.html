@@ -413,9 +413,12 @@ input::placeholder{color:var(--paper-faint);}
           <div id="panelChagyoon" class="dyn">
             <label class="lbl">차원 균열 단수 <span style="color:var(--paper-faint);font-weight:400;">(중복 가능)</span></label>
             <div class="chips">
-              <label class="chip"><input type="checkbox" value="40단 이하">40단 이하</label>
+              <label class="chip"><input type="checkbox" value="30단 이하">30단 이하</label>
               <label class="chip"><input type="checkbox" value="41단 이하">41단 이하</label>
-              <label class="chip"><input type="checkbox" value="50단 이상">50단 이상</label>
+              <label class="chip"><input type="checkbox" value="42~43단">42~43단</label>
+              <label class="chip"><input type="checkbox" value="44~45단">44~45단</label>
+              <label class="chip"><input type="checkbox" value="46~47단">46~47단</label>
+              <label class="chip"><input type="checkbox" value="48단 이상">48단 이상</label>
             </div>
           </div>
 
@@ -497,25 +500,36 @@ const firebaseConfig={
   messagingSenderId:"192279783273",
   appId:"1:192279783273:web:0a9b17d589adc830d27ff8"
 };
-firebase.initializeApp(firebaseConfig);
-const db=firebase.database();
-const queueRef=db.ref('queue');     // 대기열
-const matchRef=db.ref('matched');   // 매칭 완료 (최근 30건만 유지)
+
+/* Firebase SDK 로드 확인 (CDN 차단/네트워크 끊김 대비) */
+const FB_OK=(typeof firebase!=='undefined');
+let db=null,queueRef=null,matchRef=null;
 const MATCH_KEEP=30;
+
+if(FB_OK){
+  firebase.initializeApp(firebaseConfig);
+  db=firebase.database();
+  queueRef=db.ref('queue');     // 대기열
+  matchRef=db.ref('matched');   // 매칭 완료 (최근 30건만 유지)
+}
 
 let waitingQueue=[];
 let matchedParties=[];
 
 /* ── 연결 상태 표시 ── */
-db.ref('.info/connected').on('value',s=>{
+function initConn(){
   const box=document.getElementById('connState');
   const txt=document.getElementById('connText');
-  if(s.val()===true){box.className='conn live';txt.textContent='실시간 연결됨 · 문파 공유 중';}
-  else{box.className='conn down';txt.textContent='서버 연결 끊김 · 재연결 시도 중';}
-});
+  if(!FB_OK){box.className='conn down';txt.textContent='서버 모듈 로드 실패 · 인터넷 연결을 확인하고 새로고침하세요';return;}
+  db.ref('.info/connected').on('value',s=>{
+    if(s.val()===true){box.className='conn live';txt.textContent='실시간 연결됨 · 문파 공유 중';}
+    else{box.className='conn down';txt.textContent='서버 연결 끊김 · 재연결 시도 중';}
+  });
+}
 
 /* ── Firebase 구독: 큐/매칭이 바뀌면 모든 사람 화면 자동 갱신 ── */
 function subscribe(){
+  if(!FB_OK)return;
   queueRef.on('value',snap=>{
     const v=snap.val();
     waitingQueue=v?Object.keys(v).map(k=>({_id:k,...v[k]})):[];
@@ -570,11 +584,32 @@ function syncJobColor(){
   document.getElementById('jobWrap').style.setProperty('--swatch',JOB_COLORS[job]||'var(--gold)');
 }
 
-/* ── 매칭 사운드 ── */
+/* ── 매칭 사운드 ──
+   브라우저는 사용자 클릭 없이 만든 AudioContext를 차단한다.
+   AudioContext 하나를 공유하고, 등록 버튼 클릭 때 미리 깨워둔다.
+   그래야 "다른 사람이 등록해서 내가 매칭됐을 때"도 소리가 난다. */
+let sharedAC=null;
+function getAC(){
+  if(!sharedAC){
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return null;
+    sharedAC=new AC();
+  }
+  if(sharedAC.state==='suspended')sharedAC.resume();
+  return sharedAC;
+}
+function unlockAudio(){
+  const ctx=getAC();if(!ctx)return;
+  // 무음 1샘플 재생 → 브라우저 오디오 잠금 해제
+  try{
+    const b=ctx.createBuffer(1,1,22050);
+    const s=ctx.createBufferSource();
+    s.buffer=b;s.connect(ctx.destination);s.start(0);
+  }catch(e){}
+}
 function playMatchSound(){
   try{
-    const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
-    const ctx=new AC();if(ctx.state==='suspended')ctx.resume();
+    const ctx=getAC();if(!ctx)return;
     [[392.00,0,0.4],[329.63,0.18,0.6]].forEach(([f,s,e])=>{
       const o=ctx.createOscillator(),g=ctx.createGain();
       o.type='sine';o.frequency.setValueAtTime(f,ctx.currentTime+s);
@@ -600,6 +635,8 @@ function togglePanels(){
 
 /* ── 등록 ── */
 function registerUser(){
+  unlockAudio();   // 사용자 클릭 시점에 오디오 잠금 해제
+  if(!FB_OK){toast('서버에 연결되지 않았습니다. 인터넷 확인 후 새로고침하세요.','warn');return;}
   const nick=document.getElementById('userNick').value.trim();
   if(!nick){toast('닉네임을 입력해주세요.','warn');return;}
   const job=document.getElementById('userJob').value;
@@ -648,6 +685,7 @@ function registerUser(){
 }
 
 function cancelQueue(id){
+  if(!FB_OK)return;
   const u=waitingQueue.find(x=>x._id===id);
   queueRef.child(id).remove()
     .then(()=>{if(u)toast(`<b>${u.nick}</b> 님의 대기를 취소했습니다.`,'info');})
@@ -657,19 +695,29 @@ function cancelQueue(id){
 /* ── 자동 매칭 (트랜잭션으로 동시성 보호) ──
    큐가 바뀔 때마다 호출. 트랜잭션 안에서 매칭 가능한 파티를 찾아
    해당 인원을 큐에서 제거. 동시에 여러 명이 돌려도 중복 결성 안 됨. */
-let pendingParty=null;
+let matchBusy=false;
 function tryAutoMatch(){
+  if(!FB_OK)return;
+  if(matchBusy)return;            // 동일 클라이언트 내 중복 실행 방지
+  matchBusy=true;
+
+  let plannedParty=null;          // 이번 트랜잭션이 결성하려는 파티 (재시도마다 갱신)
+
   queueRef.transaction(current=>{
-    if(!current){pendingParty=null;return current;}
+    plannedParty=null;
+    if(!current)return current;
     const list=Object.keys(current).map(k=>({_id:k,...current[k]}));
     const result=findParty(list);
-    if(!result){pendingParty=null;return current;}        // 매칭 없음 → 큐 그대로
-    pendingParty=result;                                  // 결성 정보 보관
-    result.members.forEach(m=>{delete current[m._id];});  // 결성 인원만 큐에서 제거
+    if(!result)return current;                            // 매칭 불가 → 큐 그대로
+    plannedParty=result;
+    result.members.forEach(m=>{delete current[m._id];});  // 결성 인원만 제거
     return current;
-  },(err,committed)=>{
-    if(err||!committed||!pendingParty)return;
-    const p=pendingParty;pendingParty=null;
+  },(err,committed,snapshot)=>{
+    matchBusy=false;
+    // committed===true 이고 plannedParty가 있을 때만 = 내가 실제로 결성에 성공
+    if(err||!committed||!plannedParty)return;
+
+    const p=plannedParty;
     const n=new Date();
     const rec={
       category:p.displayCategory,
@@ -678,7 +726,6 @@ function tryAutoMatch(){
       commonGrounds:p.commonGrounds||[],
       ts:Date.now()
     };
-    // 매칭 결과 기록 + 오래된 항목 정리
     matchRef.push(rec).then(()=>{
       matchRef.orderByChild('ts').once('value',s=>{
         const all=[];s.forEach(c=>all.push({k:c.key,ts:c.val().ts||0}));
@@ -689,6 +736,9 @@ function tryAutoMatch(){
     });
     playMatchSound();
     toast(`<b>[${p.displayCategory}]</b> 파티 매칭 완료!`,'win');
+
+    // 큐에 아직 매칭 가능한 조합이 더 있으면 연쇄 매칭
+    setTimeout(tryAutoMatch,150);
   });
 }
 
@@ -806,6 +856,7 @@ initBindings();
 syncJobColor();
 updateQueueDisplay();
 updateMatchedDisplay();
+initConn();    // 연결 상태 표시
 subscribe();   // Firebase 실시간 구독 시작
 </script>
 </body>
