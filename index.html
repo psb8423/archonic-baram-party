@@ -61,30 +61,38 @@
         input[type="text"], input[type="number"], select {
             width: 100%; padding: 10px; box-sizing: border-box;
             background-color: #2d2d35; border: 1px solid #444; color: #fff; border-radius: 4px;
+            height: 40px;
         }
         
         .grid-4 { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1fr; gap: 10px; }
+        
+        /* 항목 분류 + 등록 버튼 한 줄 배치 스타일 */
+        .category-action-row {
+            display: flex; align-items: flex-end; gap: 12px; margin-top: 10px; margin-bottom: 5px;
+        }
+        .category-action-row .form-group { flex: 1; margin-bottom: 0; }
+        
+        button.submit-btn {
+            height: 40px; padding: 0 25px; background-color: var(--accent-color);
+            border: none; color: white; font-size: 15px; font-weight: bold;
+            border-radius: 4px; cursor: pointer; white-space: nowrap;
+        }
+        button.submit-btn:hover { opacity: 0.9; }
+        
+        /* 동적 사냥터 패널 */
+        .dynamic-panel { display: none; margin-top: 15px; padding: 15px; border: 1px solid #555; border-radius: 4px; background-color: var(--panel-bg); }
         .checkbox-group {
             display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
             background-color: #25252b; padding: 15px; border-radius: 4px; border: 1px solid #444;
         }
         .radio-inline { margin-right: 15px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
         
-        button.submit-btn {
-            width: 100%; padding: 12px; background-color: var(--accent-color);
-            border: none; color: white; font-size: 16px; font-weight: bold;
-            border-radius: 4px; cursor: pointer; margin-top: 15px;
-        }
-        button.submit-btn:hover { opacity: 0.9; }
-        
-        .dynamic-panel { display: none; margin-top: 15px; padding: 15px; border: 1px solid #555; border-radius: 4px; background-color: var(--panel-bg); }
-        
         /* 필터 인터페이스 스타일 */
         .filter-box { border: 1px dashed var(--warning-color); padding: 15px; border-radius: 6px; margin-top: 20px; }
         .filter-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 8px; }
         .filter-input-wrapper { display: flex; align-items: center; gap: 5px; background-color: #2d2d35; padding: 2px 8px; border-radius: 4px; border: 1px solid #444; }
         .filter-prefix { font-weight: bold; color: var(--warning-color); min-width: 35px; font-size: 13px; }
-        .filter-input-wrapper input { border: none; background: transparent; color: #fff; padding: 8px 0; width: 100%; text-align: right; }
+        .filter-input-wrapper input { border: none; background: transparent; color: #fff; padding: 8px 0; width: 100%; text-align: right; height: auto; }
         .filter-input-wrapper input:focus { outline: none; }
         .filter-suffix { color: #aaa; font-size: 13px; min-width: 45px; }
         .filter-warning { color: var(--warning-color); font-weight: bold; font-size: 12px; margin-top: 10px; text-align: center; }
@@ -141,18 +149,21 @@
                 </div>
             </div>
 
-            <div class="form-group" style="margin-top: 10px;">
-                <label>매칭 항목 선택 (대분류)</label>
-                <select id="mainCategory" onchange="togglePanels()">
-                    <option value="">-- 매칭 종류를 선택하세요 --</option>
-                    <option value="격도술">격도술</option>
-                    <option value="격도1대1">격도(1대1)</option>
-                    <option value="반반밀대">반반밀대</option>
-                    <option value="밀격쩔">밀격+쩔+밀대</option>
-                    <option value="흉가노노">흉가노노</option>
-                    <option value="차균">차균</option>
-                    <option value="레이드">레이드</option>
-                </select>
+            <div class="category-action-row">
+                <div class="form-group">
+                    <label>매칭 항목 선택 (대분류)</label>
+                    <select id="mainCategory" onchange="togglePanels()">
+                        <option value="">-- 매칭 종류를 선택하세요 --</option>
+                        <option value="격도술">격도술</option>
+                        <option value="격도1대1">격도(1대1)</option>
+                        <option value="반반밀대">반반밀대</option>
+                        <option value="밀격쩔">밀격+쩔+밀대</option>
+                        <option value="흉가노노">흉가노노</option>
+                        <option value="차균">차균</option>
+                        <option value="레이드">레이드</option>
+                    </select>
+                </div>
+                <button class="submit-btn" onclick="registerUser()">파티 대기열 등록</button>
             </div>
 
             <div id="panelGyukdo" class="dynamic-panel">
@@ -241,8 +252,6 @@
                 <div class="filter-warning">※ 필터 설정 시 파티 매칭이 느려질 수 있으니 주의 바랍니다.</div>
             </div>
 
-            <button class="submit-btn" onclick="registerUser()">파티 대기열 등록</button>
-
             <div class="match-success-section">
                 <h3>🎉 매칭 완료된 파티</h3>
                 <div id="matchSuccessList">
@@ -257,22 +266,31 @@
     let waitingQueue = [];
     let matchedParties = []; 
     
-    // 🎵 매칭 완료 알림음 선언
     const dingDongSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav');
 
+    // 대분류 셀렉트 박스 변경 시 하위 패널들을 제어하는 함수
     function togglePanels() {
         const category = document.getElementById('mainCategory').value;
+        
+        // 모든 패널 숨기기
         document.getElementById('panelGyukdo').style.display = 'none';
         document.getElementById('panelMilgyeok').style.display = 'none';
         document.getElementById('panelHyungga').style.display = 'none';
         document.getElementById('panelChagyoon').style.display = 'none';
         document.getElementById('panelRaid').style.display = 'none';
 
-        if (category === '격도술' || category === '격도1대1') document.getElementById('panelGyukdo').style.display = 'block';
-        else if (category === '반반밀대' || category === '밀격쩔') document.getElementById('panelMilgyeok').style.display = 'block';
-        else if (category === '흉가노노') document.getElementById('panelHyungga').style.display = 'block';
-        else if (category === '차균') document.getElementById('panelChagyoon').style.display = 'block';
-        else if (category === '레이드') document.getElementById('panelRaid').style.display = 'block';
+        // 선택값 매칭에 따른 패널 노출
+        if (category === '격도술' || category === '격도1대1') {
+            document.getElementById('panelGyukdo').style.display = 'block';
+        } else if (category === '반반밀대' || category === '밀격쩔') {
+            document.getElementById('panelMilgyeok').style.display = 'block';
+        } else if (category === '흉가노노') {
+            document.getElementById('panelHyungga').style.display = 'block';
+        } else if (category === '차균') {
+            document.getElementById('panelChagyoon').style.display = 'block';
+        } else if (category === '레이드') {
+            document.getElementById('panelRaid').style.display = 'block';
+        }
     }
 
     function registerUser() {
@@ -322,21 +340,19 @@
         
         if (sameCategoryUsers.length >= 3) {
             const partyMembers = sameCategoryUsers.slice(0, 3);
-            
             waitingQueue = waitingQueue.filter(u => !partyMembers.includes(u));
             
-            // 🕒 현재 시간(시:분) 계산 로직 추가
             const now = new Date();
             const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
             
             matchedParties.push({
                 category: category,
                 members: partyMembers,
-                matchTime: timeStr // 객체 데이터에 시간 저장
+                matchTime: timeStr
             });
 
             dingDongSound.play().catch(error => {
-                console.log("자동 재생 차단 방지용 로그:", error);
+                console.log("오디오 재생 제한 예외 처리:", error);
             });
             
             alert(`🎉 [${category}] 3인 파티 매칭이 성공적으로 완료되었습니다!`);
@@ -382,7 +398,6 @@
             
             const memberNames = party.members.map(m => `${m.nick}(${m.job})`).join(', ');
             
-            // 💡 태그 우측에 시간 표시 포맷 반영 ((시간 올림) 형태)
             card.innerHTML = `
                 <div style="margin-bottom: 5px;">
                     <span class="match-tag">${party.category}</span> 
