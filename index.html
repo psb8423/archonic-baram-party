@@ -103,10 +103,14 @@
             padding: 15px; border-radius: 6px;
         }
         .match-card {
-            background-color: #25252b; border: 1px solid #444; padding: 12px; border-radius: 4px; margin-top: 10px;
+            background-color: #25252b; border: 1px solid #444; padding: 14px; border-radius: 4px; margin-top: 10px;
+            line-height: 1.6;
         }
         .match-tag {
             background-color: var(--success-color); color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: bold;
+        }
+        .match-dest {
+            color: #6cffb4; font-weight: bold;
         }
     </style>
 </head>
@@ -266,20 +270,46 @@
     let waitingQueue = [];
     let matchedParties = []; 
     
-    const dingDongSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav');
+    // 🎵 브라우저 내장 주파수 합성(Web Audio API)으로 100% 신뢰성 있는 딩동 소리 구현
+    function playMatchSound() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            
+            // 첫 번째 솔 음 (딩~)
+            const osc1 = ctx.createOscillator();
+            const gain1 = ctx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(392.00, ctx.currentTime); // G4
+            gain1.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+            osc1.connect(gain1); gain1.connect(ctx.destination);
+            osc1.start(); osc1.stop(ctx.currentTime + 0.3);
+            
+            // 두 번째 미 음 (동~) 0.15초 뒤 스타트
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(329.63, ctx.currentTime + 0.15); // E4
+            gain2.gain.setValueAtTime(0.2, ctx.currentTime + 0.15);
+            gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+            osc2.connect(gain2); gain2.connect(ctx.destination);
+            osc2.start(ctx.currentTime + 0.15); osc2.stop(ctx.currentTime + 0.5);
+        } catch (e) {
+            console.log("오디오 플레이 에러 방지:", e);
+        }
+    }
 
-    // 대분류 셀렉트 박스 변경 시 하위 패널들을 제어하는 함수
     function togglePanels() {
         const category = document.getElementById('mainCategory').value;
         
-        // 모든 패널 숨기기
         document.getElementById('panelGyukdo').style.display = 'none';
         document.getElementById('panelMilgyeok').style.display = 'none';
         document.getElementById('panelHyungga').style.display = 'none';
         document.getElementById('panelChagyoon').style.display = 'none';
         document.getElementById('panelRaid').style.display = 'none';
 
-        // 선택값 매칭에 따른 패널 노출
         if (category === '격도술' || category === '격도1대1') {
             document.getElementById('panelGyukdo').style.display = 'block';
         } else if (category === '반반밀대' || category === '밀격쩔') {
@@ -304,25 +334,40 @@
         
         if(!category) { alert("매칭 항목을 선택해주세요."); return; }
 
+        let huntingGrounds = [];
+        let expBuff = 'X';
+        let mildae = 'X';
         let details = [];
         
         if (category === '격도술' || category === '격도1대1') {
-            document.querySelectorAll('#panelGyukdo input[type="checkbox"]:checked').forEach(cb => details.push(cb.value));
-            if(details.length === 0) { alert("사냥터를 하나 이상 선택해주세요."); return; }
+            document.querySelectorAll('#panelGyukdo input[type="checkbox"]:checked').forEach(cb => huntingGrounds.push(cb.value));
+            if(huntingGrounds.length === 0) { alert("사냥터를 하나 이상 선택해주세요."); return; }
+            expBuff = document.querySelector('input[name="expBuffA"]:checked').value;
+            mildae = document.querySelector('input[name="mildaeA"]:checked').value;
+            details.push(`경쿠:${expBuff}`, `밀대:${mildae}`);
         } else if (category === '반반밀대' || category === '밀격쩔') {
-            document.querySelectorAll('#panelMilgyeok input[type="checkbox"]:checked').forEach(cb => details.push(cb.value));
-            if(details.length === 0) { alert("사냥터를 하나 이상 선택해주세요."); return; }
-            details.push(document.getElementById('subRole').value);
+            document.querySelectorAll('#panelMilgyeok input[type="checkbox"]:checked').forEach(cb => huntingGrounds.push(cb.value));
+            if(huntingGrounds.length === 0) { alert("사냥터를 하나 이상 선택해주세요."); return; }
+            const role = document.getElementById('subRole').value;
+            details.push(`역할:${role}`);
         } else if (category === '흉가노노') {
-            details.push(document.querySelector('input[name="hyunggaRole"]:checked').value);
+            const hRole = document.querySelector('input[name="hyunggaRole"]:checked').value;
+            details.push(`역할:${hRole}`);
         } else if (category === '차균') {
-            document.querySelectorAll('#panelChagyoon input[type="checkbox"]:checked').forEach(cb => details.push(cb.value));
-            if(details.length === 0) { alert("단수를 선택해주세요."); return; }
+            document.querySelectorAll('#panelChagyoon input[type="checkbox"]:checked').forEach(cb => huntingGrounds.push(cb.value));
+            if(huntingGrounds.length === 0) { alert("단수를 선택해주세요."); return; }
         } else if (category === '레이드') {
-            details.push(`${document.querySelector('input[name="raidBoss"]:checked').value}(${document.getElementById('raidType').value})`);
+            const boss = document.querySelector('input[name="raidBoss"]:checked').value;
+            const rType = document.getElementById('raidType').value;
+            details.push(`보스:${boss}`, `방식:${rType}`);
         }
 
-        const userData = { nick, job, hp, mp, category, detailsStr: details.join(', ') };
+        const userData = { 
+            nick, job, hp, mp, category, 
+            huntingGrounds, expBuff, mildae,
+            detailsStr: details.length > 0 ? details.join(', ') : huntingGrounds.join(', ')
+        };
+        
         waitingQueue.push(userData);
         
         checkAndMatchParty(category);
@@ -345,15 +390,24 @@
             const now = new Date();
             const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
             
+            // 1. 3명 모두 공통 선택한 사냥터(교집합) 계산
+            let commonGrounds = [];
+            if (partyMembers[0].huntingGrounds && partyMembers[0].huntingGrounds.length > 0) {
+                commonGrounds = partyMembers[0].huntingGrounds.filter(g => 
+                    partyMembers[1].huntingGrounds.includes(g) && 
+                    partyMembers[2].huntingGrounds.includes(g)
+                );
+            }
+
             matchedParties.push({
                 category: category,
                 members: partyMembers,
-                matchTime: timeStr
+                matchTime: timeStr,
+                commonGrounds: commonGrounds
             });
 
-            dingDongSound.play().catch(error => {
-                console.log("오디오 재생 제한 예외 처리:", error);
-            });
+            // 효과음 실행 함수 호출
+            playMatchSound();
             
             alert(`🎉 [${category}] 3인 파티 매칭이 성공적으로 완료되었습니다!`);
             updateMatchedDisplay();
@@ -372,10 +426,16 @@
         waitingQueue.forEach((u, index) => {
             const item = document.createElement('div');
             item.className = 'queue-item';
+            
+            let displaySubInfo = u.detailsStr;
+            if (u.huntingGrounds.length > 0) {
+                displaySubInfo = `사냥터: ${u.huntingGrounds.join(', ')}` + (u.detailsStr ? ` (${u.detailsStr})` : '');
+            }
+
             item.innerHTML = `
                 <div class="queue-info">
                     <strong>${u.nick}</strong> [${u.job}] ${u.hp}만/${u.mp}만<br>
-                    <span style="color:var(--warning-color); font-size:12px;">➔ ${u.category} (${u.detailsStr})</span>
+                    <span style="color:var(--warning-color); font-size:12px;">➔ ${u.category} [${displaySubInfo}]</span>
                 </div>
                 <button class="cancel-btn" onclick="cancelQueue(${index})">×</button>
             `;
@@ -398,14 +458,35 @@
             
             const memberNames = party.members.map(m => `${m.nick}(${m.job})`).join(', ');
             
+            // 목적지 텍스트 파싱 (공통 사냥터 여부)
+            let destinationText = "지정 사냥터 없음 (기타 항목)";
+            if (party.category === '격도술' || party.category === '격도1대1' || party.category === '반반밀대' || party.category === '밀격쩔') {
+                destinationText = party.commonGrounds.length > 0 
+                    ? `📍 목적지 사냥터: <span class="match-dest">${party.commonGrounds.join(', ')}</span>`
+                    : `📍 목적지 사냥터: <span style="color:#ff6b6b;">공통 사냥터 없음 (중간지점 조율 필요)</span>`;
+            } else {
+                destinationText = `📍 선택 항목: <span class="match-dest">${party.members[0].detailsStr || '기본 진행'}</span>`;
+            }
+
+            // 2. 경쿠 사용자 명단 추출
+            const expUsers = party.members.filter(m => m.expBuff === 'O').map(m => m.nick);
+            const expUsersStr = expUsers.length > 0 ? `${expUsers.join(', ')}` : '없음';
+
+            // 3. 밀대 진선 고용 요청 유저 확인 및 표시
+            const mildaeUsers = party.members.filter(m => m.mildae === 'O').map(m => m.nick);
+            const mildaeStr = mildaeUsers.length > 0 ? `O (요청자: ${mildaeUsers.join(', ')})` : 'X';
+            
             card.innerHTML = `
-                <div style="margin-bottom: 5px;">
+                <div style="margin-bottom: 6px;">
                     <span class="match-tag">${party.category}</span> 
                     <span style="font-size:11px; color:#aaa; margin-left:5px;">(${party.matchTime} 올림)</span>
-                    <span style="font-size:12px; color:#27ae60; font-weight:bold; margin-left:3px;">파티 결성 완료</span>
+                    <span style="font-size:12px; color:#27ae60; font-weight:bold; margin-left:5px;">파티 결성 완료</span>
                 </div>
-                <div style="font-size: 14px; color: #fff; font-weight: bold;">👥 구성원: ${memberNames}</div>
-                <div style="font-size: 12px; color: #888; margin-top: 3px;">세부 조건: ${party.members[0].detailsStr}</div>
+                <div style="font-size: 14px; color: #fff; font-weight: bold; margin-bottom: 4px;">👥 구성원: ${memberNames}</div>
+                <div style="font-size: 13px; margin-bottom: 4px;">${destinationText}</div>
+                <div style="font-size: 12px; color: #bbb; border-top: 1px dashed #444; padding-top: 4px; margin-top: 4px;">
+                    ⚡ 세부 조건 ➔ [경쿠 사용자]: ${expUsersStr} | [밀대 진선 고용]: ${mildaeStr}
+                </div>
             `;
             matchDisplay.appendChild(card);
         });
