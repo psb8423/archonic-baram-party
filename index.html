@@ -332,7 +332,6 @@ input::placeholder{color:var(--paper-faint);}
 
   <div class="grid">
 
-    <!-- ── 좌: 입력 + 매칭결과 ── -->
     <div>
       <div class="panel">
         <div class="panel-h"><span class="ico">📜</span> 파티 신청서</div>
@@ -371,6 +370,7 @@ input::placeholder{color:var(--paper-faint);}
                 <option value="">— 매칭 종류를 선택하세요 —</option>
                 <option value="격도술">격도술</option>
                 <option value="격도1대1">격도 (1대1)</option>
+                <option value="떱헬">떱헬 (술사+술사)</option>
                 <option value="반반밀대">반반밀대</option>
                 <option value="밀격쩔">밀격 + 쩔 + 밀대</option>
                 <option value="흉가노노">흉가노노</option>
@@ -381,28 +381,26 @@ input::placeholder{color:var(--paper-faint);}
             <button class="btn-primary" onclick="registerUser()">대기열 등록</button>
           </div>
 
-          <!-- 격도술 / 격도1대1 -->
           <div id="panelGyukdo" class="dyn">
             <label class="lbl">사냥터 선택 <span style="color:var(--paper-faint);font-weight:400;">(중복 가능)</span></label>
             <div class="chips" id="gyukdoGrounds">
-              <label class="chip img-chip"><input type="checkbox" value="도삭산 900"><img src="dosack%20900.gif" alt="도삭산 900"><span>도삭산 900</span></label>
-              <label class="chip img-chip"><input type="checkbox" value="높흉"><img src="high%20hunhno.gif" alt="높흉"><span>높흉</span></label>
-              <label class="chip img-chip"><input type="checkbox" value="낮흉"><img src="low%20hungno.gif" alt="낮흉"><span>낮흉</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="도삭산 900"><img src="dosack 900.gif" alt="도삭산 900"><span>도삭산 900</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="높흉"><img src="high hunhno.gif" alt="높흉"><span>높흉</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="낮흉"><img src="low hungno.gif" alt="낮흉"><span>낮흉</span></label>
               <label class="chip img-chip"><input type="checkbox" value="선비"><img src="sunbi.gif" alt="선비"><span>선비</span></label>
-              <label class="chip img-chip"><input type="checkbox" value="도삭산 800"><img src="dosack%20800.gif" alt="도삭산 800"><span>도삭산 800</span></label>
-              <label class="chip img-chip"><input type="checkbox" value="닌자의방"><img src="ninja.gif" alt="닌자의방"><span>닌자의방</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="도삭산 800"><img src="dosack 800.gif" alt="도삭산 800"><span>도삭산 800</span></label>
             </div>
             <div class="two-col">
               <div>
                 <div class="seg-label">경쿠 사용 여부</div>
-                <div class="seg" id="segExp">
+                <div class="seg">
                   <label class="sel"><input type="radio" name="expBuffA" value="O" checked>O</label>
                   <label><input type="radio" name="expBuffA" value="X">X</label>
                 </div>
               </div>
               <div>
                 <div class="seg-label">밀대 진선 여부</div>
-                <div class="seg" id="segMildae">
+                <div class="seg">
                   <label><input type="radio" name="mildaeA" value="O">O</label>
                   <label class="sel"><input type="radio" name="mildaeA" value="X" checked>X</label>
                 </div>
@@ -410,28 +408,69 @@ input::placeholder{color:var(--paper-faint);}
             </div>
           </div>
 
-          <!-- 반반밀대 / 밀격쩔 -->
+          <div id="panelGyukdo1on1" class="dyn">
+            <label class="lbl">사냥터 선택 <span style="color:var(--paper-faint);font-weight:400;">(중복 가능)</span></label>
+            <div class="chips">
+              <label class="chip img-chip"><input type="checkbox" value="흉가"><img src="ghost house.gif" alt="흉가"><span>흉가</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="닌자"><img src="ninja.gif" alt="닌자"><span>닌자</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="선녀"><img src="sunya.gif" alt="선녀"><span>선녀</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="도삭산800"><img src="dosack 800.gif" alt="도삭산800"><span>도삭산 800</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="선비"><img src="sunbi.gif" alt="선비"><span>선비</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="낮흉"><img src="low hungno.gif" alt="낮흉"><span>낮흉</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="높흉"><img src="high hunhno.gif" alt="높흉"><span>높흉</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="도삭산 900"><img src="dosack 900.gif" alt="도삭산 900"><span>도삭산 900</span></label>
+            </div>
+            <div class="two-col">
+              <div>
+                <div class="seg-label">경쿠 사용 여부</div>
+                <div class="seg">
+                  <label class="sel"><input type="radio" name="expBuff1on1" value="O" checked>O</label>
+                  <label><input type="radio" name="expBuff1on1" value="X">X</label>
+                </div>
+              </div>
+              <div>
+                <div class="seg-label">밀대 진선 여부</div>
+                <div class="seg">
+                  <label><input type="radio" name="mildae1on1" value="O">O</label>
+                  <label class="sel"><input type="radio" name="mildae1on1" value="X" checked>X</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="panelDdubHell" class="dyn">
+            <label class="lbl">사냥터 선택 <span style="color:var(--paper-faint);font-weight:400;">(중복 가능)</span></label>
+            <div class="chips">
+              <label class="chip img-chip"><input type="checkbox" value="숲지대"><img src="forest.gif" alt="숲지대"><span>숲지대</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="신극지방"><img src="snowmon.gif" alt="신극지방"><span>신극지방</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="중~높산적"><img src="sanjuck.gif" alt="중~높산적"><span>중~높산적</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="선비"><img src="sunbi.gif" alt="선비"><span>선비</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="흉노"><img src="ghost house.gif" alt="흉노"><span>흉노</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="900층"><img src="dosack 900.gif" alt="900층"><span>900층</span></label>
+            </div>
+          </div>
+
           <div id="panelMilgyeok" class="dyn">
             <label class="lbl">사냥터 선택 <span style="color:var(--paper-faint);font-weight:400;">(중복 가능)</span></label>
             <div class="chips">
               <label class="chip img-chip"><input type="checkbox" value="선비"><img src="sunbi.gif" alt="선비"><span>선비</span></label>
               <label class="chip img-chip"><input type="checkbox" value="높산적"><img src="sanjuck.gif" alt="높산적"><span>높산적</span></label>
-              <label class="chip"><input type="checkbox" value="무사">무사</label>
+              <label class="chip img-chip"><input type="checkbox" value="무사"><img src="musa.gif" alt="무사"><span>무사</span></label>
               <label class="chip img-chip"><input type="checkbox" value="선녀"><img src="sunya.gif" alt="선녀"><span>선녀</span></label>
-              <label class="chip img-chip"><input type="checkbox" value="흉가"><img src="ghost%20house.gif" alt="흉가"><span>흉가</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="흉가"><img src="ghost house.gif" alt="흉가"><span>흉가</span></label>
             </div>
             <div class="field" style="margin-top:16px;margin-bottom:0;">
               <label class="lbl">역할 구분</label>
               <select id="subRole">
+                <option value="반반(격수)">반반(격수)</option>
+                <option value="반반(술사/도사)">반반(술사 혹은 도사)</option>
+                <option value="밀대도사(도사)">밀대도사(도사)</option>
                 <option value="밀격">밀격</option>
                 <option value="쩔">쩔</option>
-                <option value="밀대도사">밀대도사</option>
-                <option value="반반">반반</option>
               </select>
             </div>
           </div>
 
-          <!-- 흉가노노 -->
           <div id="panelHyungga" class="dyn">
             <label class="lbl">흉가노노 역할 구분</label>
             <div class="seg" id="segHyungga">
@@ -440,37 +479,37 @@ input::placeholder{color:var(--paper-faint);}
             </div>
           </div>
 
-          <!-- 차균 -->
           <div id="panelChagyoon" class="dyn">
             <label class="lbl">차원 균열 단수 <span style="color:var(--paper-faint);font-weight:400;">(중복 가능)</span></label>
             <div class="chips">
               <label class="chip"><input type="checkbox" value="30단 이하">30단 이하</label>
+              <label class="chip"><input type="checkbox" value="40단 이하">40단 이하</label>
               <label class="chip"><input type="checkbox" value="41단 이하">41단 이하</label>
               <label class="chip"><input type="checkbox" value="42~43단">42~43단</label>
               <label class="chip"><input type="checkbox" value="44~45단">44~45단</label>
               <label class="chip"><input type="checkbox" value="46~47단">46~47단</label>
               <label class="chip"><input type="checkbox" value="48단 이상">48단 이상</label>
+              <label class="chip"><input type="checkbox" value="50단 이상">50단 이상</label>
             </div>
           </div>
 
-          <!-- 레이드 -->
           <div id="panelRaid" class="dyn raid">
             <label class="lbl fire">레이드 보스 선택</label>
-            <div class="chips">
-              <label class="chip fire sel"><input type="radio" name="raidBoss" value="백호왕" checked>백호왕</label>
-              <label class="chip fire"><input type="radio" name="raidBoss" value="해골왕">해골왕</label>
-              <label class="chip fire"><input type="radio" name="raidBoss" value="용왕">용왕</label>
+            <div class="chips" id="raidBossChips">
+              <label class="chip img-chip fire sel"><input type="radio" name="raidBoss" value="백호왕" checked><img src="white_tiger.gif" alt="백호왕"><span>백호왕</span></label>
+              <label class="chip img-chip fire"><input type="radio" name="raidBoss" value="해골왕"><img src="skeleton_king.gif" alt="해골왕"><span>해골왕</span></label>
+              <label class="chip img-chip fire"><input type="radio" name="raidBoss" value="용왕"><img src="dragon_king.gif" alt="용왕"><span>용왕</span></label>
             </div>
             <div class="field" style="margin-top:16px;margin-bottom:0;">
               <label class="lbl">파티 구성 방식</label>
               <select id="raidType">
                 <option value="격도술">격도술 (소수 정예 · 3인)</option>
+                <option value="격도1대1">격도 1대1 (2인 클리어)</option>
                 <option value="떼팟">떼팟 (도사 ≥ 격수 · 10인)</option>
               </select>
             </div>
           </div>
 
-          <!-- 필터 -->
           <div class="filter">
             <label class="lbl" style="color:var(--gold);">🔍 원하는 파티원 최소 스펙</label>
             <div class="filter-grid">
@@ -484,7 +523,6 @@ input::placeholder{color:var(--paper-faint);}
         </div>
       </div>
 
-      <!-- 매칭 완료 -->
       <div class="panel match-panel">
         <div class="panel-h"><span class="ico">🎉</span> 매칭 완료된 파티</div>
         <div class="panel-b">
@@ -495,7 +533,6 @@ input::placeholder{color:var(--paper-faint);}
       </div>
     </div>
 
-    <!-- ── 우: 대기열 ── -->
     <div class="panel queue-panel">
       <div class="panel-h">
         <span class="ico">👥</span> 대기열
@@ -532,60 +569,56 @@ const firebaseConfig={
   appId:"1:192279783273:web:0a9b17d589adc830d27ff8"
 };
 
-/* Firebase SDK 로드 확인 (CDN 차단/네트워크 끊김 대비) */
 const FB_OK=(typeof firebase!=='undefined');
 let db=null,queueRef=null,matchRef=null,squadRef=null;
 const MATCH_KEEP=30;
-const DDAEPAT_MIN=7;   // 이 인원부터 "구성 중" 표시
-const GYEOK_CAP=5;     // 격수(전사·도적) 최대 자리
+const DDAEPAT_MIN=7;   
+const GYEOK_CAP=5;     
 
 if(FB_OK){
   firebase.initializeApp(firebaseConfig);
   db=firebase.database();
-  queueRef=db.ref('queue');     // 대기열
-  matchRef=db.ref('matched');   // 매칭 완료 (최근 30건만 유지)
-  squadRef=db.ref('squads');    // 떼팟 보스별 구성 중 파티
+  queueRef=db.ref('queue');     
+  matchRef=db.ref('matched');   
+  squadRef=db.ref('squads');    
 }
 
 let waitingQueue=[];
 let matchedParties=[];
-let squads={};   // {보스명:{members:{id:{...}}}}
+let squads={};   
 
-/* ── 연결 상태 표시 ── */
 function initConn(){
   const box=document.getElementById('connState');
   const txt=document.getElementById('connText');
-  if(!FB_OK){box.className='conn down';txt.textContent='서버 모듈 로드 실패 · 인터넷 연결을 확인하고 새로고침하세요';return;}
+  if(!FB_OK){box.className='conn down';txt.textContent='서버 모듈 로드 실패';return;}
   db.ref('.info/connected').on('value',s=>{
     if(s.val()===true){box.className='conn live';txt.textContent='실시간 연결됨 · 문파 공유 중';}
     else{box.className='conn down';txt.textContent='서버 연결 끊김 · 재연결 시도 중';}
   });
 }
 
-/* ── Firebase 구독: 큐/매칭이 바뀌면 모든 사람 화면 자동 갱신 ── */
 function subscribe(){
   if(!FB_OK)return;
   queueRef.on('value',snap=>{
     const v=snap.val();
     waitingQueue=v?Object.keys(v).map(k=>({_id:k,...v[k]})):[];
     updateQueueDisplay();
-    tryAutoMatch();   // 큐가 바뀔 때마다 매칭 가능 여부 확인
+    tryAutoMatch();   
   });
   matchRef.on('value',snap=>{
     const v=snap.val();
     let arr=v?Object.keys(v).map(k=>({_id:k,...v[k]})):[];
-    arr.sort((a,b)=>(b.ts||0)-(a.ts||0));   // 최신순
+    arr.sort((a,b)=>(b.ts||0)-(a.ts||0));   
     matchedParties=arr;
     updateMatchedDisplay();
   });
   squadRef.on('value',snap=>{
     squads=snap.val()||{};
-    updateMatchedDisplay();   // 떼팟 구성 중 카드도 매칭란에 함께 표시
-    checkSquadComplete();     // 10명 차면 결성 완료 처리
+    updateMatchedDisplay();   
+    checkSquadComplete();     
   });
 }
 
-/* ── 토스트 (alert 대체) ── */
 function toast(msg,type='info'){
   const wrap=document.getElementById('toasts');
   const el=document.createElement('div');
@@ -596,9 +629,10 @@ function toast(msg,type='info'){
   setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),300);},type==='win'?3400:2600);
 }
 
-/* ── 칩/세그먼트 시각 동기화 ── */
 function bindChip(label){
   const input=label.querySelector('input');
+  if(!input) return;
+  
   const sync=()=>{
     if(input.type==='radio'){
       label.closest('.chips,.seg').querySelectorAll('label').forEach(l=>l.classList.remove('sel'));
@@ -615,8 +649,9 @@ function bindChip(label){
     }else sync();
   });
 }
+
 function initBindings(){
-  document.querySelectorAll('.chip,.seg label').forEach(bindChip);
+  document.querySelectorAll('.chip, .seg label').forEach(bindChip);
 }
 
 function syncJobColor(){
@@ -624,10 +659,6 @@ function syncJobColor(){
   document.getElementById('jobWrap').style.setProperty('--swatch',JOB_COLORS[job]||'var(--gold)');
 }
 
-/* ── 매칭 사운드 ──
-   브라우저는 사용자 클릭 없이 만든 AudioContext를 차단한다.
-   AudioContext 하나를 공유하고, 등록 버튼 클릭 때 미리 깨워둔다.
-   그래야 "다른 사람이 등록해서 내가 매칭됐을 때"도 소리가 난다. */
 let sharedAC=null;
 function getAC(){
   if(!sharedAC){
@@ -640,7 +671,6 @@ function getAC(){
 }
 function unlockAudio(){
   const ctx=getAC();if(!ctx)return;
-  // 무음 1샘플 재생 → 브라우저 오디오 잠금 해제
   try{
     const b=ctx.createBuffer(1,1,22050);
     const s=ctx.createBufferSource();
@@ -661,22 +691,26 @@ function playMatchSound(){
   }catch(e){}
 }
 
-/* ── 패널 토글 ── */
 function togglePanels(){
   const c=document.getElementById('mainCategory').value;
-  ['panelGyukdo','panelMilgyeok','panelHyungga','panelChagyoon','panelRaid']
-    .forEach(id=>document.getElementById(id).classList.remove('on'));
-  if(c==='격도술'||c==='격도1대1')document.getElementById('panelGyukdo').classList.add('on');
+  ['panelGyukdo','panelGyukdo1on1','panelDdubHell','panelMilgyeok','panelHyungga','panelChagyoon','panelRaid']
+    .forEach(id=> {
+      const el = document.getElementById(id);
+      if(el) el.classList.remove('on');
+    });
+    
+  if(c==='격도술')document.getElementById('panelGyukdo').classList.add('on');
+  else if(c==='격도1대1')document.getElementById('panelGyukdo1on1').classList.add('on');
+  else if(c==='떱헬')document.getElementById('panelDdubHell').classList.add('on');
   else if(c==='반반밀대'||c==='밀격쩔')document.getElementById('panelMilgyeok').classList.add('on');
   else if(c==='흉가노노')document.getElementById('panelHyungga').classList.add('on');
   else if(c==='차균')document.getElementById('panelChagyoon').classList.add('on');
   else if(c==='레이드')document.getElementById('panelRaid').classList.add('on');
 }
 
-/* ── 등록 ── */
 function registerUser(){
-  unlockAudio();   // 사용자 클릭 시점에 오디오 잠금 해제
-  if(!FB_OK){toast('서버에 연결되지 않았습니다. 인터넷 확인 후 새로고침하세요.','warn');return;}
+  unlockAudio();   
+  if(!FB_OK){toast('서버에 연결되지 않았습니다.','warn');return;}
   const nick=document.getElementById('userNick').value.trim();
   if(!nick){toast('닉네임을 입력해주세요.','warn');return;}
   const job=document.getElementById('userJob').value;
@@ -685,14 +719,28 @@ function registerUser(){
   const category=document.getElementById('mainCategory').value;
   if(!category){toast('매칭 항목을 선택해주세요.','warn');return;}
 
+  // 내 최소 희망 스펙 필터 데이터 가져오기
+  const reqFilterHp = document.getElementById('filterHp').value || '0';
+  const reqFilterJuMp = document.getElementById('filterHyeonjaMp').value || '0';
+  const reqFilterDoMp = document.getElementById('filterDosaMp').value || '0';
+
   let huntingGrounds=[],expBuff='X',mildae='X',details=[],raidBoss='',raidType='',hyunggaRole='';
 
-  if(category==='격도술'||category==='격도1대1'){
+  if(category==='격도술'){
     document.querySelectorAll('#panelGyukdo input[type=checkbox]:checked').forEach(cb=>huntingGrounds.push(cb.value));
     if(!huntingGrounds.length){toast('사냥터를 하나 이상 선택해주세요.','warn');return;}
     expBuff=document.querySelector('input[name=expBuffA]:checked').value;
     mildae=document.querySelector('input[name=mildaeA]:checked').value;
     details.push(`경쿠:${expBuff}`,`밀대:${mildae}`);
+  }else if(category==='격도1대1'){
+    document.querySelectorAll('#panelGyukdo1on1 input[type=checkbox]:checked').forEach(cb=>huntingGrounds.push(cb.value));
+    if(!huntingGrounds.length){toast('사냥터를 하나 이상 선택해주세요.','warn');return;}
+    expBuff=document.querySelector('input[name=expBuff1on1]:checked').value;
+    mildae=document.querySelector('input[name=mildae1on1]:checked').value;
+    details.push(`경쿠:${expBuff}`,`밀대:${mildae}`);
+  }else if(category==='떱헬'){
+    document.querySelectorAll('#panelDdubHell input[type=checkbox]:checked').forEach(cb=>huntingGrounds.push(cb.value));
+    if(!huntingGrounds.length){toast('사냥터를 하나 이상 선택해주세요.','warn');return;}
   }else if(category==='반반밀대'||category==='밀격쩔'){
     document.querySelectorAll('#panelMilgyeok input[type=checkbox]:checked').forEach(cb=>huntingGrounds.push(cb.value));
     if(!huntingGrounds.length){toast('사냥터를 하나 이상 선택해주세요.','warn');return;}
@@ -709,28 +757,26 @@ function registerUser(){
     details.push(`보스:${raidBoss}`,`방식:${raidType}`);
   }
 
-  waitingQueue.push({
-    nick,job,hp,mp,category,huntingGrounds,expBuff,mildae,raidBoss,raidType,hyunggaRole,
-    detailsStr:details.length?details.join(', '):huntingGrounds.join(', ')
-  });
-
-  // ── 떼팟은 특수 처리: 대기열을 거치지 않고 보스별 스쿼드(구성 중)에 바로 합류 ──
+  // 떼팟 예외처리
   if(category==='레이드' && raidType==='떼팟'){
     const member={nick,job,hp,mp,ts:Date.now()};
     squadRef.child(raidBoss).child('members').push(member)
-      .then(()=>toast(`<b>${nick}</b> 님, ${raidBoss} 떼팟 구성에 합류했습니다.`,'info'))
-      .catch(()=>toast('합류 실패 — 서버 연결을 확인해주세요.','warn'));
+      .then(()=>toast(`<b>${nick}</b> 님, ${raidBoss} 떼팟에 합류했습니다.`,'info'))
+      .catch(()=>toast('합류 실패','warn'));
     document.getElementById('userNick').value='';
     return;
   }
 
-  // 화면에 직접 쓰지 않고 Firebase에만 기록 → 구독 콜백이 모두의 화면을 갱신
-  const entry={nick,job,hp,mp,category,huntingGrounds,expBuff,mildae,raidBoss,raidType,hyunggaRole,
+  const entry={
+    nick,job,hp,mp,category,huntingGrounds,expBuff,mildae,raidBoss,raidType,hyunggaRole,
+    filterHp: reqFilterHp, filterJuMp: reqFilterJuMp, filterDoMp: reqFilterDoMp,
     detailsStr:details.length?details.join(', '):huntingGrounds.join(', '),
-    ts:firebase.database.ServerValue.TIMESTAMP};
+    ts:firebase.database.ServerValue.TIMESTAMP
+  };
+  
   queueRef.push(entry)
     .then(()=>toast(`<b>${nick}</b> 님, 대기열에 등록되었습니다.`,'info'))
-    .catch(()=>toast('등록 실패 — 서버 연결을 확인해주세요.','warn'));
+    .catch(()=>toast('등록 실패','warn'));
   document.getElementById('userNick').value='';
 }
 
@@ -739,32 +785,28 @@ function cancelQueue(id){
   const u=waitingQueue.find(x=>x._id===id);
   queueRef.child(id).remove()
     .then(()=>{if(u)toast(`<b>${u.nick}</b> 님의 대기를 취소했습니다.`,'info');})
-    .catch(()=>toast('취소 실패 — 서버 연결을 확인해주세요.','warn'));
+    .catch(()=>toast('취소 실패','warn'));
 }
 
-/* ── 자동 매칭 (트랜잭션으로 동시성 보호) ──
-   큐가 바뀔 때마다 호출. 트랜잭션 안에서 매칭 가능한 파티를 찾아
-   해당 인원을 큐에서 제거. 동시에 여러 명이 돌려도 중복 결성 안 됨. */
 let matchBusy=false;
 function tryAutoMatch(){
   if(!FB_OK)return;
-  if(matchBusy)return;            // 동일 클라이언트 내 중복 실행 방지
+  if(matchBusy)return;            
   matchBusy=true;
 
-  let plannedParty=null;          // 이번 트랜잭션이 결성하려는 파티 (재시도마다 갱신)
+  let plannedParty=null;          
 
   queueRef.transaction(current=>{
     plannedParty=null;
     if(!current)return current;
     const list=Object.keys(current).map(k=>({_id:k,...current[k]}));
     const result=findParty(list);
-    if(!result)return current;                            // 매칭 불가 → 큐 그대로
+    if(!result)return current;                            
     plannedParty=result;
-    result.members.forEach(m=>{delete current[m._id];});  // 결성 인원만 제거
+    result.members.forEach(m=>{delete current[m._id];});  
     return current;
   },(err,committed,snapshot)=>{
     matchBusy=false;
-    // committed===true 이고 plannedParty가 있을 때만 = 내가 실제로 결성에 성공
     if(err||!committed||!plannedParty)return;
 
     const p=plannedParty;
@@ -787,80 +829,140 @@ function tryAutoMatch(){
     playMatchSound();
     toast(`<b>[${p.displayCategory}]</b> 파티 매칭 완료!`,'win');
 
-    // 큐에 아직 매칭 가능한 조합이 더 있으면 연쇄 매칭
     setTimeout(tryAutoMatch,150);
   });
 }
 
-/* ── 매칭 알고리즘 (원본 로직 유지, 순수 함수화) ──
-   list(현재 큐 배열)를 받아 결성 가능한 파티 1건을 반환하거나 null */
+/* ── 최소 필터 스펙 상호 만족 검증 함수 ── */
+function checkSpecs(u1, u2, u3=null) {
+  const users = [u1, u2];
+  if(u3) users.push(u3);
+  
+  for(let i=0; i<users.length; i++) {
+    const target = users[i];
+    const fHp = parseInt(target.filterHp || '0');
+    const fJu = parseInt(target.filterJuMp || '0');
+    const fDo = parseInt(target.filterDoMp || '0');
+    
+    for(let j=0; j<users.length; j++) {
+      if(i === j) continue;
+      const peer = users[j];
+      const peerHp = parseInt(peer.hp || '0');
+      const peerMp = parseInt(peer.mp || '0');
+      
+      if((peer.job==='전사'||peer.job==='도적') && peerHp < fHp) return false;
+      if(peer.job==='주술사' && peerMp < fJu) return false;
+      if(peer.job==='도사' && peerMp < fDo) return false;
+    }
+  }
+  return true;
+}
+
 function findParty(list){
-  // 1) 격도 1대1
+  // 1) 격도 1대1 (일반 카테고리)
   {
     const pool=list.filter(u=>u.category==='격도1대1');
-    const a=pool.find(u=>u.job!=='도사'),d=pool.find(u=>u.job==='도사'&&u!==a);
-    if(a&&d)return{displayCategory:'격도(1대1)',members:[a,d],
-      commonGrounds:(a.huntingGrounds||[]).filter(g=>(d.huntingGrounds||[]).includes(g))};
+    const a=pool.find(u=>u.job!=='도사'), d=pool.find(u=>u.job==='도사'&&u!==a);
+    if(a && d && checkSpecs(a, d)) {
+      const cg=(a.huntingGrounds||[]).filter(g=>(d.huntingGrounds||[]).includes(g));
+      if(cg.length > 0) return {displayCategory:'격도(1대1)', members:[a,d], commonGrounds:cg};
+    }
   }
-  // 2) 흉가노노
+  // 2) 레이드 내 '격도 1대1' (2인 방식)
+  {
+    const pool=list.filter(u=>u.category==='레이드' && u.raidType==='격도1대1');
+    for(const u1 of pool) {
+      if(u1.job === '도사') continue; 
+      const u2 = pool.find(x => x.job==='도사' && x.raidBoss===u1.raidBoss && x._id!==u1._id && checkSpecs(u1, x));
+      if(u2) return {displayCategory:`레이드-${u1.raidBoss}(1대1)`, members:[u1, u2], commonGrounds:[]};
+    }
+  }
+  // 3) 떱헬 (주술사 + 주술사 2인 매칭)
+  {
+    const pool=list.filter(u=>u.category==='떱헬' && u.job==='주술사');
+    if(pool.length >= 2){
+      for(let i=0; i<pool.length; i++){
+        for(let j=i+1; j<pool.length; j++){
+          const u1 = pool[i]; const u2 = pool[j];
+          if(checkSpecs(u1, u2)){
+            const cg = (u1.huntingGrounds||[]).filter(g=>(u2.huntingGrounds||[]).includes(g));
+            if(cg.length > 0) return {displayCategory:'떱헬(술사+술사)', members:[u1,u2], commonGrounds:cg};
+          }
+        }
+      }
+    }
+  }
+  // 4) 흉가노노
   {
     const pool=list.filter(u=>u.category==='흉가노노');
     const a=pool.find(u=>u.hyunggaRole==='격수'),d=pool.find(u=>u.hyunggaRole==='도사'&&u!==a);
-    if(a&&d)return{displayCategory:'흉가노노',members:[a,d],commonGrounds:[]};
+    if(a&&d&&checkSpecs(a, d))return{displayCategory:'흉가노노',members:[a,d],commonGrounds:[]};
   }
-  // 3) 레이드 (격도술만 — 떼팟은 별도 스쿼드 시스템이 처리)
+  // 5) 레이드 (격도술 - 3인 정예)
   {
     const pool=list.filter(u=>u.category==='레이드'&&u.raidType==='격도술');
-    const pairs=[];
-    pool.forEach(u=>{if(!pairs.some(p=>p.boss===u.raidBoss))pairs.push({boss:u.raidBoss});});
-    for(const pr of pairs){
-      const sp=pool.filter(u=>u.raidBoss===pr.boss);
-      if(sp.length>=3)return{displayCategory:`레이드-${pr.boss}(격도술)`,members:sp.slice(0,3),commonGrounds:[]};
+    const bosses = [...new Set(pool.map(u=>u.raidBoss))];
+    for(const boss of bosses){
+      const sp=pool.filter(u=>u.raidBoss===boss);
+      if(sp.length>=3){
+        for(let i=0;i<sp.length;i++){
+          for(let j=i+1;j<sp.length;j++){
+            for(let k=j+1;k<sp.length;k++){
+              if(checkSpecs(sp[i], sp[j], sp[k])) {
+                return{displayCategory:`레이드-${boss}(격도술)`,members:[sp[i],sp[j],sp[k]],commonGrounds:[]};
+              }
+            }
+          }
+        }
+      }
     }
   }
-  // 4) 공통 3인 (격도술, 반반밀대, 밀격쩔, 차균)
+  // 6) 공통 3인 카테고리 매칭 (격도술, 반반밀대, 밀격쩔, 차균)
   {
     const cats=['격도술','반반밀대','밀격쩔','차균'];
     for(const cat of cats){
       const same=list.filter(u=>u.category===cat);
       if(same.length>=3){
-        const pm=same.slice(0,3);
-        let cg=[];
-        if(pm[0].huntingGrounds&&pm[0].huntingGrounds.length)
-          cg=pm[0].huntingGrounds.filter(g=>(pm[1].huntingGrounds||[]).includes(g)&&(pm[2].huntingGrounds||[]).includes(g));
-        return{displayCategory:cat,members:pm,commonGrounds:cg};
+        for(let i=0;i<same.length;i++){
+          for(let j=i+1;j<same.length;j++){
+            for(let k=j+1;k<same.length;k++){
+              const p1=same[i]; const p2=same[j]; const p3=same[k];
+              if(checkSpecs(p1, p2, p3)){
+                let cg=[];
+                if(p1.huntingGrounds && p1.huntingGrounds.length) {
+                  cg=p1.huntingGrounds.filter(g=>(p2.huntingGrounds||[]).includes(g)&&(p3.huntingGrounds||[]).includes(g));
+                  if(!cg.length) continue; // 사냥터 기반 매칭인데 겹치는 곳 없으면 패스
+                }
+                return{displayCategory:cat, members:[p1,p2,p3], commonGrounds:cg};
+              }
+            }
+          }
+        }
       }
     }
   }
   return null;
 }
 
-/* ── 렌더 ── */
 function jobBadge(job){
   const c=JOB_COLORS[job]||'var(--gold)';
   return `<span class="jb" style="background:${c}22;color:${c};">${job}</span>`;
 }
 
-/* ── 떼팟 스쿼드 계산 ──
-   규칙: 본 구성의 격수(전사·도적)는 본 구성의 도사 수를 넘을 수 없다 (1:1 짝).
-        격수는 그래도 최대 5명. 도사·술사는 제한 없음.
-        도사가 부족하면 초과 격수는 "예비 격수" 순번으로 대기. */
 function computeSquad(boss){
   const node=(squads&&squads[boss]&&squads[boss].members)||{};
   const members=Object.keys(node)
     .map(k=>({_id:k,...node[k]}))
-    .sort((a,b)=>(a.ts||0)-(b.ts||0));   // 등록 순서
+    .sort((a,b)=>(a.ts||0)-(b.ts||0));   
 
-  const gyeokAll=members.filter(m=>m.job==='전사'||m.job==='도적'); // 격수(등록순)
+  const gyeokAll=members.filter(m=>m.job==='전사'||m.job==='도적'); 
   const dosaAll =members.filter(m=>m.job==='도사');
   const sulsaAll=members.filter(m=>m.job==='주술사');
 
-  // 본 구성 격수 = min(격수 수, 도사 수, 5, 그리고 10명 한도 내)
   let gIn=Math.min(gyeokAll.length, dosaAll.length, GYEOK_CAP);
   let dIn=dosaAll.length;
-  // 격수+도사가 10을 넘으면 줄임 (도사부터 줄여 격수 자리 보존, 단 도사≥격수 유지)
   while(gIn+dIn>10){
-    if(dIn>gIn)dIn--; else gIn--;
+    if(dIn>gIn) dIn--; else gIn--;
   }
   let sIn=Math.min(sulsaAll.length, 10-gIn-dIn);
 
@@ -869,14 +971,11 @@ function computeSquad(boss){
     ...dosaAll.slice(0,dIn),
     ...sulsaAll.slice(0,sIn)
   ];
-  // 본 구성에 못 든 격수 = 예비 격수 (등록 순서대로 순번)
   const reserveGyeok=gyeokAll.slice(gIn);
 
-  return {members,main,reserveGyeok,
-    gyeok:gIn, dosa:dIn, sulsa:sIn};
+  return {members,main,reserveGyeok, gyeok:gIn, dosa:dIn, sulsa:sIn};
 }
 
-/* ── 10명 완성 시 결성 완료 처리 ── */
 let squadCompleting={};
 function checkSquadComplete(){
   if(!FB_OK||!squads)return;
@@ -884,7 +983,6 @@ function checkSquadComplete(){
     const s=computeSquad(boss);
     if(s.main.length>=10 && !squadCompleting[boss]){
       squadCompleting[boss]=true;
-      // 본 구성 10명을 매칭 완료로 옮기고, 그 인원만 스쿼드에서 제거
       const n=new Date();
       const rec={
         category:`레이드-${boss}(떼팟)`,
@@ -909,12 +1007,11 @@ function checkSquadComplete(){
   });
 }
 
-/* ── 떼팟 멤버 본인 취소 ── */
 function cancelSquadMember(boss,id){
   if(!FB_OK)return;
   squadRef.child(boss).child('members').child(id).remove()
     .then(()=>toast('떼팟 구성에서 빠졌습니다.','info'))
-    .catch(()=>toast('취소 실패 — 서버 연결을 확인해주세요.','warn'));
+    .catch(()=>toast('취소 실패','warn'));
 }
 
 function updateQueueDisplay(){
@@ -939,16 +1036,16 @@ function updateQueueDisplay(){
     L.appendChild(d);
   });
 }
+
 function updateMatchedDisplay(){
   const M=document.getElementById('matchSuccessList');
   M.innerHTML='';
 
-  // ── 1) 떼팟 구성 중 카드 (보스별, 7명 이상일 때 표시) ──
   let squadShown=false;
   if(squads){
     Object.keys(squads).forEach(boss=>{
       const s=computeSquad(boss);
-      if(s.main.length<DDAEPAT_MIN)return;   // 7명 미만은 숨김
+      if(s.main.length<DDAEPAT_MIN)return;   
       squadShown=true;
       const mainList=s.main.map(m=>`
         <span class="sq-mem">
@@ -970,7 +1067,7 @@ function updateMatchedDisplay(){
           <span class="sq-count">${s.main.length} / 10</span>
           <span class="mdone prog">● 구성 중</span>
         </div>
-        <div class="sq-stat">격수 ${s.gyeok} · 도사 ${s.dosa} · 술사 ${s.sulsa} <span style="color:var(--paper-faint);">(격수는 도사 수만큼, 최대 ${GYEOK_CAP})</span></div>
+        <div class="sq-stat">격수 ${s.gyeok} · 도사 ${s.dosa} · 술사 ${s.sulsa}</div>
         <div class="sq-bar"><div class="sq-fill" style="width:${s.main.length*10}%"></div></div>
         <div class="sq-grid">${mainList}</div>
         <div class="sq-rsv-wrap">🔁 ${reserve}</div>`;
@@ -978,7 +1075,6 @@ function updateMatchedDisplay(){
     });
   }
 
-  // ── 2) 결성 완료 카드 ──
   if(!matchedParties.length && !squadShown){
     M.innerHTML='<div class="empty">아직 결성된 파티가 없습니다.</div>';return;
   }
@@ -987,10 +1083,11 @@ function updateMatchedDisplay(){
     let dest;
     if(p.commonGrounds&&p.commonGrounds.length)
       dest=`📍 목적지 사냥터: <b>${p.commonGrounds.join(', ')}</b>`;
-    else if(/격도술|반반밀대|밀격쩔/.test(p.category))
+    else if(/격도술|격도1대1|떱헬|반반밀대|밀격쩔/.test(p.category))
       dest=`📍 목적지 사냥터: <span class="none">공통 사냥터 없음 (중간지점 조율 필요)</span>`;
     else
       dest=`📍 설정 세부사항: <b>${p.members[0].detailsStr||'기본 조건 진행'}</b>`;
+    
     const exp=p.members.filter(m=>m.expBuff==='O').map(m=>m.nick);
     const mil=p.members.filter(m=>m.mildae==='O').map(m=>m.nick);
     const c=document.createElement('div');c.className='mcard';
@@ -1007,13 +1104,12 @@ function updateMatchedDisplay(){
   });
 }
 
-/* ── 초기화 ── */
 initBindings();
 syncJobColor();
 updateQueueDisplay();
 updateMatchedDisplay();
-initConn();    // 연결 상태 표시
-subscribe();   // Firebase 실시간 구독 시작
+initConn();    
+subscribe();   
 </script>
 </body>
 </html>
