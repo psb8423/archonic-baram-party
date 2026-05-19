@@ -183,6 +183,15 @@ input::placeholder{color:var(--paper-faint);}
   color:var(--gold);font-weight:700;
 }
 .chip.fire.sel{border-color:var(--cinnabar);background:rgba(192,73,47,.16);color:#e08266;}
+/* 이미지 칩 */
+.chip.img-chip{flex-direction:column;padding:10px 6px 8px;gap:5px;min-height:90px;}
+.chip.img-chip img{
+  width:48px;height:48px;object-fit:contain;
+  image-rendering:pixelated;image-rendering:crisp-edges;
+  display:block;transition:transform .14s;
+}
+.chip.img-chip:hover img{transform:scale(1.1);}
+.chip.img-chip span{font-size:12px;line-height:1.2;}
 
 .seg-label{font-size:12.5px;font-weight:700;color:var(--paper-dim);margin:14px 0 7px;letter-spacing:.05em;}
 .seg{display:inline-flex;border:1px solid var(--line-soft);border-radius:7px;overflow:hidden;}
@@ -376,11 +385,12 @@ input::placeholder{color:var(--paper-faint);}
           <div id="panelGyukdo" class="dyn">
             <label class="lbl">사냥터 선택 <span style="color:var(--paper-faint);font-weight:400;">(중복 가능)</span></label>
             <div class="chips" id="gyukdoGrounds">
-              <label class="chip"><input type="checkbox" value="도삭산 900">도삭산 900</label>
-              <label class="chip"><input type="checkbox" value="높흉">높흉</label>
-              <label class="chip"><input type="checkbox" value="낮흉">낮흉</label>
-              <label class="chip"><input type="checkbox" value="선비">선비</label>
-              <label class="chip"><input type="checkbox" value="도삭산 800">도삭산 800</label>
+              <label class="chip img-chip"><input type="checkbox" value="도삭산 900"><img src="dosack%20900.gif" alt="도삭산 900"><span>도삭산 900</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="높흉"><img src="high%20hunhno.gif" alt="높흉"><span>높흉</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="낮흉"><img src="low%20hungno.gif" alt="낮흉"><span>낮흉</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="선비"><img src="sunbi.gif" alt="선비"><span>선비</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="도삭산 800"><img src="dosack%20800.gif" alt="도삭산 800"><span>도삭산 800</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="닌자의방"><img src="ninja.gif" alt="닌자의방"><span>닌자의방</span></label>
             </div>
             <div class="two-col">
               <div>
@@ -404,11 +414,11 @@ input::placeholder{color:var(--paper-faint);}
           <div id="panelMilgyeok" class="dyn">
             <label class="lbl">사냥터 선택 <span style="color:var(--paper-faint);font-weight:400;">(중복 가능)</span></label>
             <div class="chips">
-              <label class="chip"><input type="checkbox" value="선비">선비</label>
-              <label class="chip"><input type="checkbox" value="높산적">높산적</label>
+              <label class="chip img-chip"><input type="checkbox" value="선비"><img src="sunbi.gif" alt="선비"><span>선비</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="높산적"><img src="sanjuck.gif" alt="높산적"><span>높산적</span></label>
               <label class="chip"><input type="checkbox" value="무사">무사</label>
-              <label class="chip"><input type="checkbox" value="선녀">선녀</label>
-              <label class="chip"><input type="checkbox" value="흉가">흉가</label>
+              <label class="chip img-chip"><input type="checkbox" value="선녀"><img src="sunya.gif" alt="선녀"><span>선녀</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="흉가"><img src="ghost%20house.gif" alt="흉가"><span>흉가</span></label>
             </div>
             <div class="field" style="margin-top:16px;margin-bottom:0;">
               <label class="lbl">역할 구분</label>
