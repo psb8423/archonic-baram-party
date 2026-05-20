@@ -6,7 +6,7 @@
 <title>옛날바람 파티 매칭소</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2 family=Gowun+Batang:wght@400;700&family=Song+Myung&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Song+Myung&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
@@ -108,6 +108,7 @@ body::before{
 .lbl{
   display:block;margin-bottom:8px;font-size:14.5px;font-weight:700;
   color:var(--paper-dim);letter-spacing:.05em;
+  height:21px; line-height:21px; /* 일관된 높이 부여 */
 }
 .lbl .req{color:var(--cinnabar);margin-left:4px;}
 input[type=text],input[type=number],select{
@@ -138,7 +139,7 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
 }
 .job-wrap select{padding-left:18px;}
 
-/* ── 등록 액션 행 ── */
+/* ── 등록 액션 행 보정 ── */
 .action-row{
   display:grid;grid-template-columns:1.5fr 1fr 130px;gap:14px;align-items:flex-end;margin-top:6px;
 }
@@ -153,6 +154,7 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
   font-family:'Noto Sans KR',sans-serif;
   box-shadow:0 4px 14px rgba(223,182,91,.3);
   transition:transform .12s,box-shadow .12s,filter .12s;
+  display:block; width:100%;
 }
 .btn-primary:hover{filter:brightness(1.08);box-shadow:0 6px 20px rgba(223,182,91,.45);}
 .btn-primary:active{transform:translateY(1px);}
@@ -407,7 +409,9 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
                 <option value="1시간 이상">1시간 이상</option>
               </select>
             </div>
-            <button class="btn-primary" onclick="registerUser()">대기열 등록</button>
+            <div class="field">
+              <label class="lbl">&nbsp;</label> <button class="btn-primary" onclick="registerUser()">대기열 등록</button>
+            </div>
           </div>
 
           <div id="panelGyukdo" class="dyn">
@@ -638,6 +642,11 @@ let waitingQueue=[];
 let matchedParties=[];
 let squads={};   
 
+// 글로벌 더미 오디오 인스턴스 미리 생성 (브라우저 정책 우회용 핵심 장치)
+let globalMatchAudio = new Audio();
+globalMatchAudio.src = 'invite.mp3';
+globalMatchAudio.load();
+
 // 로컬 차단 목록 로드 및 렌더링
 function loadBlacklistLocal(){
   const saved = localStorage.getItem('baram_match_blacklist');
@@ -703,11 +712,16 @@ function initConn(){
     else{box.className='conn down';txt.textContent='서버 연결 끊김 · 재연결 시도 중';}
   });
   
-  // 브라우저 오디오 권한 획득 사전 안내용 안내 노출
-  document.body.addEventListener('click', function initAudioPermission() {
-    // 유저 클릭 시 오디오가 정상 활성화될 수 있는 조건 만족됨
-    document.body.removeEventListener('click', initAudioPermission);
-  }, { once: true });
+  // 브라우저 오디오 권한 획득 사전 해제용 이벤트 리스너 (엔터/클릭 전부 포함)
+  const unlockAudio = () => {
+    globalMatchAudio.play().then(() => {
+      globalMatchAudio.pause(); // 오디오를 일시적으로 재생했다가 멈춤으로써 권한 확보
+    }).catch(e => console.log("Audio readying...", e));
+    window.removeEventListener('click', unlockAudio);
+    window.removeEventListener('keydown', unlockAudio);
+  };
+  window.addEventListener('click', unlockAudio);
+  window.addEventListener('keydown', unlockAudio);
 }
 
 function subscribe(){
@@ -765,6 +779,17 @@ function bindChip(label){
 
 function initBindings(){
   document.querySelectorAll('.chip, .seg label').forEach(bindChip);
+  
+  // 엔터키 입력 시 대기열 등록 실행 매핑
+  document.getElementById('userNick').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') registerUser();
+  });
+  document.getElementById('userHp').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') registerUser();
+  });
+  document.getElementById('userMp').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') registerUser();
+  });
 }
 
 function syncJobColor(){
@@ -772,15 +797,20 @@ function syncJobColor(){
   document.getElementById('jobWrap').style.setProperty('--swatch',JOB_COLORS[job]||'var(--gold)');
 }
 
-// invite.mp3 오디오 재생 처리 함수 (창 최소화 여부 무관 배경 무한 연동 재생)
+// invite.mp3 알림음 재생 연동 제어 함수 (강력한 가로채기 방지 적용)
 function playMatchSound(){
   try {
-    const audio = new Audio('invite.mp3');
-    audio.play().catch(err => {
-      console.warn("오디오 재생 흐름이 차단되었습니다. 페이지를 한 번 클릭해야 사운드가 출력됩니다.", err);
-    });
+    globalMatchAudio.currentTime = 0;
+    let p = globalMatchAudio.play();
+    if (p !== undefined) {
+      p.catch(err => {
+        // 백그라운드 재생 차단 예외 시 완전 새 인스턴스로 2차 백업 재생 시도
+        const backupAudio = new Audio('invite.mp3');
+        backupAudio.play().catch(e => console.warn("오디오 최종 재생 실패: ", e));
+      });
+    }
   } catch(e) {
-    console.error("오디오 로드 에러:", e);
+    console.error("오디오 핸들러 에러:", e);
   }
 }
 
@@ -922,7 +952,9 @@ function tryAutoMatch(){
         for(let i=0;i<over;i++)matchRef.child(all[i].k).remove();
       });
     });
-    playMatchSound(); // 알림음 재생
+    
+    // 비동기 트랜잭션 종료 시 즉시 알림 사운드 트리거 실행
+    playMatchSound(); 
     toast(`<b>[${p.displayCategory}]</b> 파티 매칭 완료!`,'win');
 
     setTimeout(tryAutoMatch,150);
@@ -1118,7 +1150,7 @@ function checkSquadComplete(){
           for(let i=0;i<all.length-MATCH_KEEP;i++)matchRef.child(all[i].k).remove();
         });
       }).catch(()=>{squadCompleting[boss]=false;});
-      playMatchSound(); // 떼팟 결성 시에도 동일 구동
+      playMatchSound(); // 떼팟 결성 시에도 사운드 구동
       toast(`<b>[${boss} 떼팟]</b> 10명 완성 — 결성 완료!`,'win');
     }
   });
