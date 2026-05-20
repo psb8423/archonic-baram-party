@@ -43,7 +43,6 @@ body{
   padding:clamp(12px,3vw,32px);
   -webkit-text-size-adjust:100%;
 }
-/* 은은한 한지 결 */
 body::before{
   content:"";position:fixed;inset:0;pointer-events:none;opacity:.04;z-index:0;
   background-image:repeating-linear-gradient(0deg,#fff 0 1px,transparent 1px 3px);
@@ -128,7 +127,6 @@ input::placeholder{color:var(--paper-faint);}
 .row{display:grid;grid-template-columns:1.6fr 1.2fr 1fr 1fr;gap:12px;}
 @media(max-width:560px){.row{grid-template-columns:1fr 1fr;}}
 
-/* 직업 셀렉트 좌측 컬러 표식 */
 .job-wrap{position:relative;}
 .job-wrap::before{
   content:"";position:absolute;left:1px;top:1px;bottom:1px;width:4px;
@@ -139,14 +137,13 @@ input::placeholder{color:var(--paper-faint);}
 
 /* ── 등록 액션 행 ── */
 .action-row{
-  display:flex;gap:12px;align-items:flex-end;margin-top:4px;
+  display:grid;grid-template-columns:1.5fr 1fr 120px;gap:12px;align-items:flex-end;margin-top:4px;
 }
-.action-row .field{flex:1;margin-bottom:0;}
 @media(max-width:560px){
-  .action-row{flex-direction:column;align-items:stretch;}
+  .action-row{grid-template-columns:1fr;align-items:stretch;}
 }
 .btn-primary{
-  height:44px;padding:0 26px;border:1px solid var(--gold-soft);
+  height:44px;padding:0 20px;border:1px solid var(--gold-soft);
   background:linear-gradient(180deg,#d8b558,#a9833a);
   color:#1a140a;font-weight:900;font-size:14.5px;letter-spacing:.04em;
   border-radius:7px;cursor:pointer;white-space:nowrap;
@@ -183,7 +180,7 @@ input::placeholder{color:var(--paper-faint);}
   color:var(--gold);font-weight:700;
 }
 .chip.fire.sel{border-color:var(--cinnabar);background:rgba(192,73,47,.16);color:#e08266;}
-/* 이미지 칩 */
+
 .chip.img-chip{flex-direction:column;padding:10px 6px 8px;gap:5px;min-height:90px;}
 .chip.img-chip img{
   width:48px;height:48px;object-fit:contain;
@@ -205,10 +202,13 @@ input::placeholder{color:var(--paper-faint);}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:6px;}
 @media(max-width:480px){.two-col{grid-template-columns:1fr;}}
 
-/* ── 필터 ── */
-.filter{
-  margin-top:18px;padding:16px;border:1px dashed var(--gold-soft);
-  border-radius:8px;background:rgba(201,162,75,.04);
+/* ── 필터 및 블랙리스트 상자 ── */
+.filter, .blacklist-box{
+  margin-top:16px;padding:16px;border:1px dashed var(--gold-soft);
+  border-radius:8px;background:rgba(201,162,75,.03);
+}
+.blacklist-box{
+  border-color:var(--cinnabar);background:rgba(192,73,47,.02);
 }
 .filter-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:10px;}
 @media(max-width:560px){.filter-grid{grid-template-columns:1fr;}}
@@ -226,7 +226,7 @@ input::placeholder{color:var(--paper-faint);}
 .queue-panel .panel-b{padding:14px;}
 .queue-count{
   margin-left:auto;font-size:12px;font-weight:900;color:var(--ink);
-  background:var(--gold);border-radius:999px;padding:2px 10px;font-family:'Noto Sans KR';
+  background:var(--gold);border-radius999px;padding:2px 10px;font-family:'Noto Sans KR';
 }
 .qlist{display:flex;flex-direction:column;gap:9px;max-height:60vh;overflow-y:auto;}
 @media(max-width:860px){.qlist{max-height:none;}}
@@ -378,6 +378,15 @@ input::placeholder{color:var(--paper-faint);}
                 <option value="레이드">레이드</option>
               </select>
             </div>
+            <div class="field">
+              <label class="lbl">사냥 시간</label>
+              <select id="playTime">
+                <option value="30분 이하">30분 이하</option>
+                <option value="30분" selected>30분</option>
+                <option value="1시간">1시간</option>
+                <option value="1시간 이상">1시간 이상</option>
+              </select>
+            </div>
             <button class="btn-primary" onclick="registerUser()">대기열 등록</button>
           </div>
 
@@ -496,9 +505,9 @@ input::placeholder{color:var(--paper-faint);}
           <div id="panelRaid" class="dyn raid">
             <label class="lbl fire">레이드 보스 선택</label>
             <div class="chips" id="raidBossChips">
-              <label class="chip img-chip fire sel"><input type="radio" name="raidBoss" value="백호왕" checked><img src="tiger king.gif" alt="백호왕"><span>백호왕</span></label>
-              <label class="chip img-chip fire"><input type="radio" name="raidBoss" value="해골왕"><img src="skul king.gif" alt="해골왕"><span>해골왕</span></label>
-              <label class="chip img-chip fire"><input type="radio" name="raidBoss" value="용왕"><img src="dragon king.gif" alt="용왕"><span>용왕</span></label>
+              <label class="chip img-chip fire sel"><input type="radio" name="raidBoss" value="백호왕" checked><img src="white_tiger.gif" alt="백호왕"><span>백호왕</span></label>
+              <label class="chip img-chip fire"><input type="radio" name="raidBoss" value="해골왕"><img src="skeleton_king.gif" alt="해골왕"><span>해골왕</span></label>
+              <label class="chip img-chip fire"><input type="radio" name="raidBoss" value="용왕"><img src="dragon_king.gif" alt="용왕"><span>용왕</span></label>
             </div>
             <div class="field" style="margin-top:16px;margin-bottom:0;">
               <label class="lbl">파티 구성 방식</label>
@@ -518,6 +527,12 @@ input::placeholder{color:var(--paper-faint);}
               <div class="f-cell"><span class="px">도사</span><input type="number" id="filterDosaMp" placeholder="0"><span class="sx">만+</span></div>
             </div>
             <div class="filter-note">※ 필터 설정 시 파티 매칭이 느려질 수 있습니다.</div>
+          </div>
+
+          <div class="blacklist-box">
+            <label class="lbl" style="color:var(--cinnabar);">🚫 내 차단 목록 관리 (이 사람과는 매칭 차단)</label>
+            <input type="text" id="blacklistInput" placeholder="차단할 닉네임들을 쉼표(,)로 구분해서 입력 (예: 홍길동, 임꺽정)" oninput="saveBlacklistLocal()">
+            <div class="filter-note" style="color:var(--paper-dim); text-align:left; margin-top:6px;">※ 입력한 유저와는 서로 매칭 리스트에서 완전히 제외됩니다. (자동 저장됨)</div>
           </div>
 
         </div>
@@ -587,7 +602,26 @@ let waitingQueue=[];
 let matchedParties=[];
 let squads={};   
 
+// 로컬 차단 목록 로드 및 저장
+function loadBlacklistLocal(){
+  const saved = localStorage.getItem('baram_match_blacklist');
+  if(saved){
+    document.getElementById('blacklistInput').value = saved;
+  }
+}
+function saveBlacklistLocal(){
+  const val = document.getElementById('blacklistInput').value;
+  localStorage.setItem('baram_match_blacklist', val);
+}
+
+// 닉네임 정형화 배열 반환
+function getMyBlacklistArray(){
+  const val = document.getElementById('blacklistInput').value;
+  return val.split(',').map(s=>s.trim()).filter(s=>s.length>0);
+}
+
 function initConn(){
+  loadBlacklistLocal();
   const box=document.getElementById('connState');
   const txt=document.getElementById('connText');
   if(!FB_OK){box.className='conn down';txt.textContent='서버 모듈 로드 실패';return;}
@@ -659,27 +693,12 @@ function syncJobColor(){
   document.getElementById('jobWrap').style.setProperty('--swatch',JOB_COLORS[job]||'var(--gold)');
 }
 
-let sharedAC=null;
-function getAC(){
-  if(!sharedAC){
-    const AC=window.AudioContext||window.webkitAudioContext;
-    if(!AC)return null;
-    sharedAC=new AC();
-  }
-  if(sharedAC.state==='suspended')sharedAC.resume();
-  return sharedAC;
-}
-function unlockAudio(){
-  const ctx=getAC();if(!ctx)return;
-  try{
-    const b=ctx.createBuffer(1,1,22050);
-    const s=ctx.createBufferSource();
-    s.buffer=b;s.connect(ctx.destination);s.start(0);
-  }catch(e){}
-}
+// 오디오 연속 재생이슈 전면 해결용 재생 모듈
 function playMatchSound(){
   try{
-    const ctx=getAC();if(!ctx)return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    const ctx = new AC(); // 재생할 때마다 독립된 오디오 컨텍스트 및 주파수 노드 세트를 새로 활성화해 브라우저 상태를 완벽히 리셋
     [[392.00,0,0.4],[329.63,0.18,0.6]].forEach(([f,s,e])=>{
       const o=ctx.createOscillator(),g=ctx.createGain();
       o.type='sine';o.frequency.setValueAtTime(f,ctx.currentTime+s);
@@ -709,7 +728,6 @@ function togglePanels(){
 }
 
 function registerUser(){
-  unlockAudio();   
   if(!FB_OK){toast('서버에 연결되지 않았습니다.','warn');return;}
   const nick=document.getElementById('userNick').value.trim();
   if(!nick){toast('닉네임을 입력해주세요.','warn');return;}
@@ -718,11 +736,14 @@ function registerUser(){
   const mp=document.getElementById('userMp').value||'0';
   const category=document.getElementById('mainCategory').value;
   if(!category){toast('매칭 항목을 선택해주세요.','warn');return;}
+  const playTime=document.getElementById('playTime').value;
 
-  // 내 최소 희망 스펙 필터 데이터 가져오기
   const reqFilterHp = document.getElementById('filterHp').value || '0';
   const reqFilterJuMp = document.getElementById('filterHyeonjaMp').value || '0';
   const reqFilterDoMp = document.getElementById('filterDosaMp').value || '0';
+  
+  // 내가 작성해둔 블랙리스트를 배열로 포함하여 등록
+  const myBlacklist = getMyBlacklistArray();
 
   let huntingGrounds=[],expBuff='X',mildae='X',details=[],raidBoss='',raidType='',hyunggaRole='';
 
@@ -759,7 +780,7 @@ function registerUser(){
 
   // 떼팟 예외처리
   if(category==='레이드' && raidType==='떼팟'){
-    const member={nick,job,hp,mp,ts:Date.now()};
+    const member={nick,job,hp,mp,playTime,ts:Date.now()};
     squadRef.child(raidBoss).child('members').push(member)
       .then(()=>toast(`<b>${nick}</b> 님, ${raidBoss} 떼팟에 합류했습니다.`,'info'))
       .catch(()=>toast('합류 실패','warn'));
@@ -768,8 +789,9 @@ function registerUser(){
   }
 
   const entry={
-    nick,job,hp,mp,category,huntingGrounds,expBuff,mildae,raidBoss,raidType,hyunggaRole,
+    nick,job,hp,mp,category,huntingGrounds,expBuff,mildae,raidBoss,raidType,hyunggaRole,playTime,
     filterHp: reqFilterHp, filterJuMp: reqFilterJuMp, filterDoMp: reqFilterDoMp,
+    blacklist: myBlacklist,
     detailsStr:details.length?details.join(', '):huntingGrounds.join(', '),
     ts:firebase.database.ServerValue.TIMESTAMP
   };
@@ -833,11 +855,24 @@ function tryAutoMatch(){
   });
 }
 
-/* ── 최소 필터 스펙 상호 만족 검증 함수 ── */
-function checkSpecs(u1, u2, u3=null) {
+/* ── 최소 필터 스펙 및 블랙리스트 상호 포함 조건 전면 검증 함수 ── */
+function checkSpecsAndBlacklist(u1, u2, u3=null) {
   const users = [u1, u2];
   if(u3) users.push(u3);
   
+  // 1. 블랙리스트 상호 교차 검증 (한쪽이라도 상대방을 차단 목록에 넣어두었다면 불합격)
+  for(let i=0; i<users.length; i++){
+    const me = users[i];
+    const myBanList = me.blacklist || [];
+    for(let j=0; j<users.length; j++){
+      if(i === j) continue;
+      const peer = users[j];
+      // 내 차단 목록에 상대의 닉네임이 정확히 포함되어 있는지 체크
+      if(myBanList.includes(peer.nick)) return false;
+    }
+  }
+
+  // 2. 최소 스펙 필터 검증
   for(let i=0; i<users.length; i++) {
     const target = users[i];
     const fHp = parseInt(target.filterHp || '0');
@@ -863,7 +898,7 @@ function findParty(list){
   {
     const pool=list.filter(u=>u.category==='격도1대1');
     const a=pool.find(u=>u.job!=='도사'), d=pool.find(u=>u.job==='도사'&&u!==a);
-    if(a && d && checkSpecs(a, d)) {
+    if(a && d && checkSpecsAndBlacklist(a, d)) {
       const cg=(a.huntingGrounds||[]).filter(g=>(d.huntingGrounds||[]).includes(g));
       if(cg.length > 0) return {displayCategory:'격도(1대1)', members:[a,d], commonGrounds:cg};
     }
@@ -873,7 +908,7 @@ function findParty(list){
     const pool=list.filter(u=>u.category==='레이드' && u.raidType==='격도1대1');
     for(const u1 of pool) {
       if(u1.job === '도사') continue; 
-      const u2 = pool.find(x => x.job==='도사' && x.raidBoss===u1.raidBoss && x._id!==u1._id && checkSpecs(u1, x));
+      const u2 = pool.find(x => x.job==='도사' && x.raidBoss===u1.raidBoss && x._id!==u1._id && checkSpecsAndBlacklist(u1, x));
       if(u2) return {displayCategory:`레이드-${u1.raidBoss}(1대1)`, members:[u1, u2], commonGrounds:[]};
     }
   }
@@ -884,7 +919,7 @@ function findParty(list){
       for(let i=0; i<pool.length; i++){
         for(let j=i+1; j<pool.length; j++){
           const u1 = pool[i]; const u2 = pool[j];
-          if(checkSpecs(u1, u2)){
+          if(checkSpecsAndBlacklist(u1, u2)){
             const cg = (u1.huntingGrounds||[]).filter(g=>(u2.huntingGrounds||[]).includes(g));
             if(cg.length > 0) return {displayCategory:'떱헬(술사+술사)', members:[u1,u2], commonGrounds:cg};
           }
@@ -896,7 +931,7 @@ function findParty(list){
   {
     const pool=list.filter(u=>u.category==='흉가노노');
     const a=pool.find(u=>u.hyunggaRole==='격수'),d=pool.find(u=>u.hyunggaRole==='도사'&&u!==a);
-    if(a&&d&&checkSpecs(a, d))return{displayCategory:'흉가노노',members:[a,d],commonGrounds:[]};
+    if(a&&d&&checkSpecsAndBlacklist(a, d))return{displayCategory:'흉가노노',members:[a,d],commonGrounds:[]};
   }
   // 5) 레이드 (격도술 - 3인 정예)
   {
@@ -908,7 +943,7 @@ function findParty(list){
         for(let i=0;i<sp.length;i++){
           for(let j=i+1;j<sp.length;j++){
             for(let k=j+1;k<sp.length;k++){
-              if(checkSpecs(sp[i], sp[j], sp[k])) {
+              if(checkSpecsAndBlacklist(sp[i], sp[j], sp[k])) {
                 return{displayCategory:`레이드-${boss}(격도술)`,members:[sp[i],sp[j],sp[k]],commonGrounds:[]};
               }
             }
@@ -927,11 +962,11 @@ function findParty(list){
           for(let j=i+1;j<same.length;j++){
             for(let k=j+1;k<same.length;k++){
               const p1=same[i]; const p2=same[j]; const p3=same[k];
-              if(checkSpecs(p1, p2, p3)){
+              if(checkSpecsAndBlacklist(p1, p2, p3)){
                 let cg=[];
                 if(p1.huntingGrounds && p1.huntingGrounds.length) {
                   cg=p1.huntingGrounds.filter(g=>(p2.huntingGrounds||[]).includes(g)&&(p3.huntingGrounds||[]).includes(g));
-                  if(!cg.length) continue; // 사냥터 기반 매칭인데 겹치는 곳 없으면 패스
+                  if(!cg.length) continue;
                 }
                 return{displayCategory:cat, members:[p1,p2,p3], commonGrounds:cg};
               }
@@ -953,7 +988,7 @@ function computeSquad(boss){
   const node=(squads&&squads[boss]&&squads[boss].members)||{};
   const members=Object.keys(node)
     .map(k=>({_id:k,...node[k]}))
-    .sort((a,b)=>(a.ts||0)-(b.ts||0));   
+    .sort((a,b)=>(b.ts||0)-(b.ts||0));   
 
   const gyeokAll=members.filter(m=>m.job==='전사'||m.job==='도적'); 
   const dosaAll =members.filter(m=>m.job==='도사');
@@ -1029,7 +1064,7 @@ function updateQueueDisplay(){
     d.innerHTML=`
       <div style="flex:1;min-width:0;">
         <div><span class="nm">${u.nick}</span>${jobBadge(u.job)}</div>
-        <div class="stat">체력 ${u.hp}만 · 마력 ${u.mp}만</div>
+        <div class="stat">체력 ${u.hp}만 · 마력 ${u.mp}만 <span style="color:var(--gold-soft);">(${u.playTime || '30분'})</span></div>
         <div class="mode">➔ ${u.category} <span style="color:var(--paper-faint);">[${sub}]</span></div>
       </div>
       <button class="x-btn" onclick="cancelQueue('${u._id}')" title="대기 취소">×</button>`;
@@ -1090,6 +1125,10 @@ function updateMatchedDisplay(){
     
     const exp=p.members.filter(m=>m.expBuff==='O').map(m=>m.nick);
     const mil=p.members.filter(m=>m.mildae==='O').map(m=>m.nick);
+    
+    // 매칭 인원들의 사냥 시간 취합 표시
+    const times=p.members.map(m=>`${m.nick}:${m.playTime||'30분'}`).join(', ');
+
     const c=document.createElement('div');c.className='mcard';
     c.innerHTML=`
       <div class="top">
@@ -1099,6 +1138,7 @@ function updateMatchedDisplay(){
       </div>
       <div class="mmem">👥 [${p.members.length}명] ${names}</div>
       <div class="mdest">${dest}</div>
+      <div class="mdest" style="font-size:11.5px; color:var(--gold);">⏱️ 희망 시간: [ ${times} ]</div>
       <div class="mfoot">⚡ 경쿠: ${exp.length?exp.join(', '):'없음'} · 밀대 진선: ${mil.length?'O ('+mil.join(', ')+')':'X'}</div>`;
     M.appendChild(c);
   });
