@@ -108,10 +108,10 @@ body::before{
 .lbl{
   display:block;margin-bottom:8px;font-size:14.5px;font-weight:700;
   color:var(--paper-dim);letter-spacing:.05em;
-  height:21px; line-height:21px; /* 일관된 높이 부여 */
+  height:21px; line-height:21px;
 }
 .lbl .req{color:var(--cinnabar);margin-left:4px;}
-input[type=text],input[type=number],select{
+input[type=text],input[type=number],input[type=password],select{
   width:100%;height:48px;padding:0 14px;
   background:var(--ink-2);border:1px solid var(--line);
   color:var(--paper);border-radius:7px;font-size:16px; /* 입력창 글자 확대 */
@@ -139,13 +139,19 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
 }
 .job-wrap select{padding-left:18px;}
 
-/* ── 등록 액션 행 보정 ── */
+/* 등록 액션 행 수평 삐뚤어짐 완벽 보정 */
 .action-row{
-  display:grid;grid-template-columns:1.5fr 1fr 130px;gap:14px;align-items:flex-end;margin-top:6px;
+  display:flex; gap:14px; align-items:flex-end; margin-top:6px; width:100%;
 }
+.action-row .field-main-cat { flex: 1.5; min-width: 0; }
+.action-row .field-play-time { flex: 1; min-width: 0; }
+.action-row .field-btn { width: 130px; flex-shrink: 0; }
+
 @media(max-width:560px){
-  .action-row{grid-template-columns:1fr;align-items:stretch;}
+  .action-row{flex-direction:column; align-items:stretch;}
+  .action-row .field-btn { width: 100%; }
 }
+
 .btn-primary{
   height:48px;padding:0 20px;border:1px solid var(--gold);
   background:linear-gradient(180deg,#eecb70,#bfa157);
@@ -154,10 +160,13 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
   font-family:'Noto Sans KR',sans-serif;
   box-shadow:0 4px 14px rgba(223,182,91,.3);
   transition:transform .12s,box-shadow .12s,filter .12s;
-  display:block; width:100%;
+  display:block; width:100%; margin:0;
 }
 .btn-primary:hover{filter:brightness(1.08);box-shadow:0 6px 20px rgba(223,182,91,.45);}
 .btn-primary:active{transform:translateY(1px);}
+.btn-primary:disabled{
+  background:#332d24; border-color:#554a38; color:#77674e; cursor:not-allowed; box-shadow:none;
+}
 
 /* ── 동적 패널 ── */
 .dyn{
@@ -227,10 +236,29 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
 .f-cell .sx{font-size:13px;color:var(--paper-dim);white-space:nowrap;font-weight:500;}
 .filter-note{font-size:13px;color:var(--gold);text-align:center;margin-top:12px;font-family:'Gowun Batang',serif;font-weight:700;}
 
+/* 관리자 제어 콘솔 패널 스타일 */
+.admin-panel {
+  display: none; border-color: var(--jade); background: rgba(111,207,171,0.02); margin-top: 20px;
+}
+.admin-panel.active { display: block; animation: slideIn 0.3s ease; }
+.admin-ban-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.admin-ban-item {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--ink-2); border: 1px solid var(--line-soft); border-radius: 6px; padding: 10px 14px;
+}
+.admin-ban-info { font-size: 14.5px; color: var(--paper); }
+.admin-ban-info b { color: var(--cinnabar); font-family: monospace; font-size: 15px; margin-right: 8px; }
+.admin-ban-info span { color: var(--paper-dim); }
+.admin-unban-btn {
+  background: rgba(220,91,64,0.15); border: 1px solid rgba(220,91,64,0.4);
+  color: #fcaaa0; padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 700;
+}
+.admin-unban-btn:hover { background: var(--cinnabar); color: #fff; }
+
 /* ── 우측 대기열 및 차단 목록 사이드바 ── */
 .queue-panel .panel-b, .blacklist-panel .panel-b{padding:16px;}
 .queue-count{
-  margin-left:auto;font-size:13px;font-weight:900;color:var(--ink);
+  margin-left:auto;font-size:13px;font-weight:900;color:#0e0d0b;
   background:var(--gold);border-radius:999px;padding:3px 11px;font-family:'Noto Sans KR';
 }
 .blacklist-count{
@@ -279,17 +307,31 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
   background:var(--panel);border:1px solid var(--line);
   border-left:4px solid var(--jade);border-radius:8px;
   padding:16px 18px;margin-bottom:14px;animation:slideIn .3s ease;
+  position: relative;
 }
 .mcard:last-child{margin-bottom:0;}
-.mcard .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.mcard .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;padding-right:110px;}
 .mtag{background:var(--jade);color:#080f0c;font-weight:900;font-size:12.5px;padding:4px 10px;border-radius:5px;}
 .mtime{font-size:12.5px;color:var(--paper-dim);font-weight:500;}
 .mdone{font-size:13.5px;color:var(--jade);font-weight:900;margin-left:auto;}
 .mmem{font-size:16px;color:var(--paper);font-weight:900;margin-bottom:8px;}
+.mdone.banned-notice{color:var(--cinnabar);}
 .mdest{font-size:14.5px;color:var(--paper);margin-bottom:8px;}
 .mdest b{color:var(--jade);font-weight:700;}
 .mdest .none{color:#f5927a;font-weight:700;}
 .mfoot{font-size:13.5px;color:var(--paper-dim);border-top:1px dashed var(--line-soft);padding-top:8px;margin-top:4px;font-weight:500;}
+
+/* 허위 매칭 신고 버튼 스타일 */
+.report-btn{
+  position:absolute;top:16px;right:18px;
+  background:rgba(220,91,64,0.12);border:1px solid rgba(220,91,64,0.5);
+  color:#fcaaa0;font-size:12px;font-weight:700;padding:5px 9px;border-radius:5px;
+  cursor:pointer;transition:all .15s;font-family:inherit;
+}
+.report-btn:hover{
+  background:var(--cinnabar);color:#fff;border-color:var(--cinnabar);
+  box-shadow:0 2px 8px rgba(220,91,64,0.4);
+}
 
 /* ── 떼팟 구성 중 카드 ── */
 .mcard.squad{border-left-color:var(--gold);}
@@ -311,6 +353,67 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
 }
 .sq-x:hover{color:var(--cinnabar);background:rgba(220,91,64,.15);}
 .sq-rsv-wrap{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13.5px;color:var(--paper-dim);font-weight:500;}
+
+/* ── 매칭 성공 중앙 알림 팝업창 (모달) CSS ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10000; opacity: 0; pointer-events: none;
+  transition: opacity 0.25s ease; padding: 16px;
+}
+.modal-overlay.open { opacity: 1; pointer-events: auto; }
+.modal-box {
+  background: linear-gradient(135deg, var(--panel-2), var(--panel));
+  border: 2px solid var(--jade); border-radius: 12px;
+  width: 100%; max-width: 520px; padding: 24px;
+  box-shadow: 0 12px 50px rgba(0,0,0,0.8), 0 0 20px rgba(111,207,171,0.2);
+  transform: scale(0.9); transition: transform 0.25s cubic-bezier(0.2, 1.1, 0.3, 1);
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.modal-overlay.open .modal-box { transform: scale(1); }
+.modal-header {
+  text-align: center; border-bottom: 1px dashed var(--line);
+  padding-bottom: 14px; margin-bottom: 18px;
+}
+.modal-title {
+  font-family: 'Song Myung', serif; font-size: 26px; color: var(--jade);
+  margin: 0; letter-spacing: 0.04em; text-shadow: 0 0 10px rgba(111,207,171,0.3);
+}
+.modal-subtitle {
+  font-size: 13.5px; color: var(--paper-dim); margin: 6px 0 0; font-weight: 500;
+}
+.modal-body { margin-bottom: 22px; }
+.modal-party-list {
+  display: flex; flex-direction: column; gap: 10px; background: var(--ink-2);
+  padding: 14px; border: 1px solid var(--line-soft); border-radius: 8px;
+}
+.modal-member-row {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 16px; border-bottom: 1px dashed #2c251d; padding-bottom: 8px;
+}
+.modal-member-row:last-child { border-bottom: none; padding-bottom: 0; }
+.modal-m-info { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.modal-m-spec { color: var(--paper-dim); font-size: 14.5px; font-weight: 500; }
+.modal-extra-info {
+  margin-top: 14px; padding: 10px 14px; background: rgba(223,182,91,0.05);
+  border: 1px solid rgba(223,182,91,0.15); border-radius: 6px; font-size: 14px; line-height: 1.5;
+}
+.modal-btn-wrap { text-align: center; }
+.modal-close-btn {
+  background: linear-gradient(180deg, #8ae2c2, #56aa89); border: 1px solid var(--jade);
+  color: #05100b; font-weight: 900; font-size: 15.5px; padding: 10px 32px;
+  border-radius: 6px; cursor: pointer; transition: all 0.12s;
+  box-shadow: 0 4px 12px rgba(111,207,171,0.25);
+}
+.modal-close-btn:hover { filter: brightness(1.08); box-shadow: 0 6px 16px rgba(111,207,171,0.4); }
+
+/* 숨겨진 로그인 버튼 스타일 */
+.admin-trigger-btn {
+  position: fixed; bottom: 8px; right: 8px; width: 24px; height: 24px;
+  background: transparent; border: none; color: rgba(255,255,255,0.04);
+  font-size: 11px; cursor: pointer; z-index: 99999; text-align: center; line-height: 24px;
+}
+.admin-trigger-btn:hover { color: rgba(223,182,91,0.5); background: rgba(0,0,0,0.4); border-radius: 4px; }
 
 /* ── 토스트 ── */
 #toasts{
@@ -362,12 +465,12 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
           <div class="row">
             <div class="field">
               <label class="lbl">인게임 닉네임<span class="req">*</span></label>
-              <input type="text" id="userNick" placeholder="닉네임 입력">
+              <input type="text" id="userNick" placeholder="닉네임 입력" oninput="saveUserInfoLocal()">
             </div>
             <div class="field">
               <label class="lbl">직업</label>
               <div class="job-wrap" id="jobWrap">
-                <select id="userJob" onchange="syncJobColor()">
+                <select id="userJob" onchange="syncJobColor(); saveUserInfoLocal();">
                   <option value="전사">전사</option>
                   <option value="도적">도적</option>
                   <option value="주술사">주술사</option>
@@ -377,16 +480,16 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
             </div>
             <div class="field">
               <label class="lbl">체력(만)</label>
-              <input type="number" id="userHp" placeholder="227">
+              <input type="number" id="userHp" placeholder="227" oninput="saveUserInfoLocal()">
             </div>
             <div class="field">
               <label class="lbl">마력(만)</label>
-              <input type="number" id="userMp" placeholder="90">
+              <input type="number" id="userMp" placeholder="90" oninput="saveUserInfoLocal()">
             </div>
           </div>
 
           <div class="action-row">
-            <div class="field">
+            <div class="field field-main-cat">
               <label class="lbl">매칭 항목<span class="req">*</span></label>
               <select id="mainCategory" onchange="togglePanels()">
                 <option value="">— 매칭 종류를 선택하세요 —</option>
@@ -400,7 +503,7 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
                 <option value="레이드">레이드</option>
               </select>
             </div>
-            <div class="field">
+            <div class="field field-play-time">
               <label class="lbl">사냥 시간</label>
               <select id="playTime">
                 <option value="30분 이하">30분 이하</option>
@@ -409,8 +512,8 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
                 <option value="1시간 이상">1시간 이상</option>
               </select>
             </div>
-            <div class="field">
-              <label class="lbl">&nbsp;</label> <button class="btn-primary" onclick="registerUser()">대기열 등록</button>
+            <div class="field field-btn">
+              <button id="regBtn" class="btn-primary" onclick="registerUser()">대기열 등록</button>
             </div>
           </div>
 
@@ -529,9 +632,9 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
           <div id="panelRaid" class="dyn raid">
             <label class="lbl fire">레이드 보스 선택</label>
             <div class="chips" id="raidBossChips">
-              <label class="chip img-chip fire sel"><input type="radio" name="raidBoss" value="백호왕" checked><img src="white_tiger.gif" alt="백호왕"><span>백호왕</span></label>
-              <label class="chip img-chip fire"><input type="radio" name="raidBoss" value="해골왕"><img src="skeleton_king.gif" alt="해골왕"><span>해골왕</span></label>
-              <label class="chip img-chip fire"><input type="radio" name="raidBoss" value="용왕"><img src="dragon_king.gif" alt="용왕"><span>용왕</span></label>
+              <label class="chip img-chip fire sel"><input type="radio" name="raidBoss" value="백호왕" checked><img src="tiger king.gif" alt="백호왕"><span>백호왕</span></label>
+              <label class="chip img-chip fire"><input type="radio" name="raidBoss" value="해골왕"><img src="skul king.gif" alt="해골왕"><span>해골왕</span></label>
+              <label class="chip img-chip fire"><input type="radio" name="raidBoss" value="용왕"><img src="dragon king.gif" alt="용왕"><span>용왕</span></label>
             </div>
             <div class="field" style="margin-top:16px;margin-bottom:0;">
               <label class="lbl">파티 구성 방식</label>
@@ -546,9 +649,9 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
           <div class="filter">
             <label class="lbl" style="color:var(--gold); font-size:15.5px;">🔍 원하는 파티원 최소 스펙</label>
             <div class="filter-grid">
-              <div class="f-cell"><span class="px">격수</span><input type="number" id="filterHp" placeholder="0"><span class="sx">만+</span></div>
-              <div class="f-cell"><span class="px">술사</span><input type="number" id="filterHyeonjaMp" placeholder="0"><span class="sx">만+</span></div>
-              <div class="f-cell"><span class="px">도사</span><input type="number" id="filterDosaMp" placeholder="0"><span class="sx">만+</span></div>
+              <div class="f-cell"><span class="px">격수</span><input type="number" id="filterHp" placeholder="0" oninput="saveUserInfoLocal()"><span class="sx">만+</span></div>
+              <div class="f-cell"><span class="px">술사</span><input type="number" id="filterHyeonjaMp" placeholder="0" oninput="saveUserInfoLocal()"><span class="sx">만+</span></div>
+              <div class="f-cell"><span class="px">도사</span><input type="number" id="filterDosaMp" placeholder="0" oninput="saveUserInfoLocal()"><span class="sx">만+</span></div>
             </div>
             <div class="filter-note">※ 필터 설정 시 파티 매칭이 느려질 수 있습니다.</div>
           </div>
@@ -559,6 +662,13 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
               <input type="text" id="blacklistInput" placeholder="차단할 닉네임들을 쉼표(,)로 구분 혹은 개별 입력" oninput="syncBlacklistFromInput()">
             </div>
             <div class="filter-note" style="color:var(--paper-dim); text-align:left; margin-top:6px; font-weight:normal;">※ 우측 사이드바 하단에서 현재 저장된 차단 리스트를 모아보고 해제할 수 있습니다.</div>
+          </div>
+
+          <div id="adminPanel" class="filter admin-panel">
+            <label class="lbl" style="color:var(--jade); font-size:16px; font-family:'Gowun Batang', serif;">👑 매칭소 관리자 제어 콘솔</label>
+            <div style="font-size:13.5px; color:var(--paper-dim); margin-bottom:12px;">현재 시스템에 의해 차단 및 밴 처리된 실시간 IP 명단입니다.</div>
+            <div id="adminBanList" class="admin-ban-list">
+              </div>
           </div>
 
         </div>
@@ -608,6 +718,26 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
   </div>
 </div>
 
+<div id="matchModal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 class="modal-title">🎉 파티 매칭 완료</h2>
+      <div class="modal-subtitle" id="modalCategory">격도술 매칭에 성공했습니다!</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-party-list" id="modalPartyList">
+        </div>
+      <div class="modal-extra-info" id="modalExtraInfo">
+        </div>
+    </div>
+    <div class="modal-btn-wrap">
+      <button class="modal-close-btn" onclick="closeMatchModal()">그룹 확인</button>
+    </div>
+  </div>
+</div>
+
+<button class="admin-trigger-btn" onclick="triggerAdminAuth()" title="Admin 시스템 모듈">🔒</button>
+
 <div id="toasts"></div>
 
 <script>
@@ -630,6 +760,17 @@ const MATCH_KEEP=30;
 const DDAEPAT_MIN=7;   
 const GYEOK_CAP=5;     
 
+let waitingQueue=[];
+let matchedParties=[];
+let squads={};   
+let userIp = ""; 
+let isBannedUser = false; 
+let isAdminAuthenticated = false;
+
+// 브라우저 오디오 채널 제어용 AudioContext 및 버퍼 전역 변수
+let audioCtx = null;
+let audioBuffer = null;
+
 if(FB_OK){
   firebase.initializeApp(firebaseConfig);
   db=firebase.database();
@@ -638,14 +779,193 @@ if(FB_OK){
   squadRef=db.ref('squads');    
 }
 
-let waitingQueue=[];
-let matchedParties=[];
-let squads={};   
+// 비밀번호 SHA-256 단방향 안전 해시 함수 적용
+async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
-// 글로벌 더미 오디오 인스턴스 미리 생성 (브라우저 정책 우회용 핵심 장치)
-let globalMatchAudio = new Audio();
-globalMatchAudio.src = 'invite.mp3';
-globalMatchAudio.load();
+// ── [신설] 암호화된 관리자 검증 및 콘솔 활성화 트리거 ──
+async function triggerAdminAuth() {
+  const inputPw = prompt("🔒 시스템 관리자 보안 인증\n\n액세스 비밀번호를 입력하십시오.");
+  if(!inputPw) return;
+  
+  // 지정하신 비밀번호의 SHA-256 해시값 검증 (소스 유출 완전 원천 차단)
+  const hashedTarget = "f3259e8ca92ee844579c3d4420bf4405cf5ee79d67b0704400810ee3511b033a";
+  const processedHash = await sha256(inputPw);
+  
+  if(processedHash === hashedTarget) {
+    isAdminAuthenticated = true;
+    document.getElementById('adminPanel').classList.add('active');
+    toast("최고 관리자 권한 승인 완료. 제어 콘솔을 로드합니다.", "win");
+    listenAdminBlacklist();
+  } else {
+    toast("보안 인증 실패: 비밀번호가 일치하지 않습니다.", "warn");
+  }
+}
+
+// ── [보완] IP 차단 검사 및 기기 마킹 ──
+function checkIpAndDeviceBan(){
+  if(localStorage.getItem('baram_banned_device') === 'true'){
+    applyBanUi();
+    return;
+  }
+
+  fetch('https://api.ipify.org?format=json')
+    .then(res => res.json())
+    .then(data => {
+      userIp = data.ip;
+      if(!FB_OK) return;
+      
+      db.ref('blacklist_ips').once('value', snap => {
+        const blacklist = snap.val() || {};
+        const safeIpKey = userIp.replace(/\./g, '_');
+        
+        if(blacklist[safeIpKey]){
+          localStorage.setItem('baram_banned_device', 'true');
+          applyBanUi();
+        }
+      });
+    })
+    .catch(err => console.log("IP 가져오기 오류 (무시하고 진행):", err));
+}
+
+function applyBanUi(){
+  isBannedUser = true;
+  const regBtn = document.getElementById('regBtn');
+  if(regBtn){
+    regBtn.disabled = true;
+    regBtn.textContent = "등록 불가 (차단됨)";
+  }
+  toast("악의적인 활동이 감지되어 시스템 이용이 제한되었습니다.", "warn");
+}
+
+// ── [보완] 허위 매칭 실시간 신고 처리 기능 (추정 아이디 데이터 스키마 보완 바인딩) ──
+function reportFakeMatch(matchKey) {
+  if(!FB_OK) return;
+
+  const realScammerNick = prompt("⚠️ 허위 매칭 신고 안내\n\n매칭 리스트에 적힌 사칭 닉네임 대신, 실제 디스코드나 인게임에서 접촉해 온 '진짜 빌런 닉네임'을 입력해 주세요.\n해당 유저의 등록 IP와 현재 브라우저가 즉각 차단 조치됩니다.");
+  
+  if(!realScammerNick || !realScammerNick.trim()) {
+    toast("신고가 취소되었습니다.", "info");
+    return;
+  }
+
+  const targetNick = realScammerNick.trim();
+
+  db.ref('queue_ips').child(targetNick).once('value', snap => {
+    let ScammerIp = snap.val();
+
+    if(!ScammerIp) {
+      const foundInQueue = waitingQueue.find(u => u.nick === targetNick);
+      if(foundInQueue && foundInQueue._ip) {
+        ScammerIp = foundInQueue._ip;
+      }
+    }
+
+    if(ScammerIp) {
+      const safeIpKey = ScammerIp.replace(/\./g, '_');
+      // 추정 아이디 메타데이터 구조를 객체 형태로 저장하도록 고도화
+      db.ref('blacklist_ips').child(safeIpKey).set({
+        ip: ScammerIp,
+        estimatedNick: targetNick,
+        ts: Date.now()
+      }).then(() => {
+        toast(`허위 등록 유저 [<b>${targetNick}</b>]의 IP가 즉시 영구 차단되었습니다.`, 'warn');
+      });
+    } else {
+      db.ref('blacklist_nicks').child(targetNick).set(true);
+      toast(`[<b>${targetNick}</b>] 님이 허위 사칭 유저로 신고 및 등록 차단 처리되었습니다.`, 'warn');
+    }
+  });
+}
+
+// ── [신설] 관리자 전용 데이터베이스 블랙리스트 실시간 스트리밍 리스너 ──
+function listenAdminBlacklist() {
+  if(!FB_OK || !isAdminAuthenticated) return;
+  
+  db.ref('blacklist_ips').on('value', snap => {
+    const listContainer = document.getElementById('adminBanList');
+    const data = snap.val();
+    
+    if(!data) {
+      listContainer.innerHTML = '<div class="empty" style="padding:14px 0;">현재 시스템에 차단된 IP가 존재하지 않습니다.</div>';
+      return;
+    }
+    
+    let htmlStr = '';
+    Object.keys(data).forEach(key => {
+      const node = data[key];
+      // 올바른 구조체 추출 또는 구버전 하위 호환 매핑 처리
+      const actualIp = node.ip ? node.ip : key.replace(/_/g, '.');
+      const nick = node.estimatedNick ? node.estimatedNick : "추적 불가 유저";
+      
+      htmlStr += `
+        <div class="admin-ban-item">
+          <div class="admin-ban-info">
+            <b>${actualIp}</b>
+            <span>(추정 ID: <b style="color:var(--gold); font-size:14px;">${nick}</b>)</span>
+          </div>
+          <button class="admin-unban-btn" onclick="removeIpBanFromServer('${key}', '${nick}')">❌ 차단 해제</button>
+        </div>
+      `;
+    });
+    listContainer.innerHTML = htmlStr;
+  });
+}
+
+// ── [신설] 관리자 전용 실시간 서버 밴 해제 처리 트랜잭션 ──
+function removeIpBanFromServer(safeIpKey, associatedNick) {
+  if(!FB_OK || !isAdminAuthenticated) return;
+  if(!confirm(`정말로 해당 유저(추정 ID: ${associatedNick})의 IP 차단을 해제하시겠습니까?`)) return;
+  
+  db.ref('blacklist_ips').child(safeIpKey).remove()
+    .then(() => {
+      // 연동된 닉네임 기반 노드가 존재한다면 2차 정화 클렌징 연동
+      if(associatedNick && associatedNick !== "추적 불가 유저") {
+        db.ref('blacklist_nicks').child(associatedNick).remove();
+      }
+      toast("해당 IP의 시스템 접근 차단이 정상적으로 해제되었습니다.", "info");
+    }).catch(err => {
+      toast("차단 해제 중 서버 네트워크 오류 발생", "warn");
+    });
+}
+
+// ── 입력 정보 자동 저장 (로컬 스토리지) ──
+function saveUserInfoLocal(){
+  const info = {
+    nick: document.getElementById('userNick').value,
+    job: document.getElementById('userJob').value,
+    hp: document.getElementById('userHp').value,
+    mp: document.getElementById('userMp').value,
+    filterHp: document.getElementById('filterHp').value,
+    filterJuMp: document.getElementById('filterHyeonjaMp').value,
+    filterDosaMp: document.getElementById('filterDosaMp').value
+  };
+  localStorage.setItem('baram_match_user_presets', JSON.stringify(info));
+}
+
+// ── 저장된 정보 자동 불러오기 ──
+function loadUserInfoLocal(){
+  const saved = localStorage.getItem('baram_match_user_presets');
+  if(saved){
+    try {
+      const info = JSON.parse(saved);
+      if(info.nick) document.getElementById('userNick').value = info.nick;
+      if(info.job) {
+        document.getElementById('userJob').value = info.job;
+        syncJobColor();
+      }
+      if(info.hp) document.getElementById('userHp').value = info.hp;
+      if(info.mp) document.getElementById('userMp').value = info.mp;
+      if(info.filterHp) document.getElementById('filterHp').value = info.filterHp;
+      if(info.filterJuMp) document.getElementById('filterHyeonjaMp').value = info.filterJuMp;
+      if(info.filterDosaMp) document.getElementById('filterDosaMp').value = info.filterDosaMp;
+    } catch(e) { console.error("기존 입력정보 로드 실패:", e); }
+  }
+}
 
 // 로컬 차단 목록 로드 및 렌더링
 function loadBlacklistLocal(){
@@ -656,20 +976,17 @@ function loadBlacklistLocal(){
   renderBlacklistSide();
 }
 
-// 왼쪽 Input에서 작성된 데이터를 로컬 저장소와 동기화하고 우측 UI 리렌더링
 function syncBlacklistFromInput(){
   const val = document.getElementById('blacklistInput').value;
   localStorage.setItem('baram_match_blacklist', val);
   renderBlacklistSide();
 }
 
-// 닉네임 정형화 배열 반환
 function getMyBlacklistArray(){
   const val = document.getElementById('blacklistInput').value;
   return val.split(',').map(s=>s.trim()).filter(s=>s.length>0);
 }
 
-// 우측 사이드바에 차단 리스트 칩 노출 및 카운트 갱신
 function renderBlacklistSide(){
   const container = document.getElementById('blacklistContainer');
   const countEl = document.getElementById('bCount');
@@ -690,7 +1007,6 @@ function renderBlacklistSide(){
   `).join('');
 }
 
-// 개별 차단 유저 제거 (우측 리스트에서 X 누를 시)
 function removeBlacklistUser(name){
   let arr = getMyBlacklistArray();
   arr = arr.filter(n => n !== name);
@@ -699,11 +1015,28 @@ function removeBlacklistUser(name){
   localStorage.setItem('baram_match_blacklist', updatedVal);
   renderBlacklistSide();
   toast(`<b>${name}</b> 님의 차단을 해제했습니다.`, 'info');
-  tryAutoMatch(); // 차단 해제 시 새로 갱신 매칭 유도
+  tryAutoMatch(); 
+}
+
+// ── [보완] 브라우저 Web Audio API 기반 오디오 사전 로드 및 해제 함수 ──
+function initAudioSetup() {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  
+  fetch('invite.mp3')
+    .then(response => response.arrayBuffer())
+    .then(data => audioCtx.decodeAudioData(data))
+    .then(buffer => {
+      audioBuffer = buffer;
+    })
+    .catch(err => console.log("알림음 버퍼 로드 대기 중 (정상):", err));
 }
 
 function initConn(){
-  loadBlacklistLocal();
+  loadUserInfoLocal();   
+  loadBlacklistLocal();  
+  checkIpAndDeviceBan(); 
+  initAudioSetup();      // 최신 브라우저 타겟 웹 오디오 엔진 초기화
+  
   const box=document.getElementById('connState');
   const txt=document.getElementById('connText');
   if(!FB_OK){box.className='conn down';txt.textContent='서버 모듈 로드 실패';return;}
@@ -712,16 +1045,15 @@ function initConn(){
     else{box.className='conn down';txt.textContent='서버 연결 끊김 · 재연결 시도 중';}
   });
   
-  // 브라우저 오디오 권한 획득 사전 해제용 이벤트 리스너 (엔터/클릭 전부 포함)
-  const unlockAudio = () => {
-    globalMatchAudio.play().then(() => {
-      globalMatchAudio.pause(); // 오디오를 일시적으로 재생했다가 멈춤으로써 권한 확보
-    }).catch(e => console.log("Audio readying...", e));
-    window.removeEventListener('click', unlockAudio);
-    window.removeEventListener('keydown', unlockAudio);
+  const unlockAudioContext = () => {
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    window.removeEventListener('click', unlockAudioContext);
+    window.removeEventListener('keydown', unlockAudioContext);
   };
-  window.addEventListener('click', unlockAudio);
-  window.addEventListener('keydown', unlockAudio);
+  window.addEventListener('click', unlockAudioContext);
+  window.addEventListener('keydown', unlockAudioContext);
 }
 
 function subscribe(){
@@ -780,7 +1112,6 @@ function bindChip(label){
 function initBindings(){
   document.querySelectorAll('.chip, .seg label').forEach(bindChip);
   
-  // 엔터키 입력 시 대기열 등록 실행 매핑
   document.getElementById('userNick').addEventListener('keydown', (e) => {
     if(e.key === 'Enter') registerUser();
   });
@@ -797,21 +1128,68 @@ function syncJobColor(){
   document.getElementById('jobWrap').style.setProperty('--swatch',JOB_COLORS[job]||'var(--gold)');
 }
 
-// invite.mp3 알림음 재생 연동 제어 함수 (강력한 가로채기 방지 적용)
 function playMatchSound(){
-  try {
-    globalMatchAudio.currentTime = 0;
-    let p = globalMatchAudio.play();
-    if (p !== undefined) {
-      p.catch(err => {
-        // 백그라운드 재생 차단 예외 시 완전 새 인스턴스로 2차 백업 재생 시도
-        const backupAudio = new Audio('invite.mp3');
-        backupAudio.play().catch(e => console.warn("오디오 최종 재생 실패: ", e));
-      });
-    }
-  } catch(e) {
-    console.error("오디오 핸들러 에러:", e);
+  if (!audioCtx || !audioBuffer) {
+    const legacyAudio = new Audio('invite.mp3');
+    legacyAudio.play().catch(e => console.log("백업 오디오 재생 생략"));
+    return;
   }
+  
+  try {
+    const soundSource = audioCtx.createBufferSource();
+    soundSource.buffer = audioBuffer;
+    soundSource.connect(audioCtx.destination);
+    soundSource.start(0);
+  } catch(e) {
+    console.error("오디오 출력 스트림 에러:", e);
+  }
+}
+
+function openMatchModal(partyData){
+  const modal = document.getElementById('matchModal');
+  const catEl = document.getElementById('modalCategory');
+  const listContainer = document.getElementById('modalPartyList');
+  const extraEl = document.getElementById('modalExtraInfo');
+
+  catEl.textContent = `[${partyData.displayCategory}] 매칭 그룹이 결성되었습니다.`;
+
+  let listHtml = partyData.members.map(m => {
+    const isSlayer = (m.job === '전사' || m.job === '도적');
+    const specStr = isSlayer ? `체력 ${m.hp}만` : `마력 ${m.mp}만`;
+    const c = JOB_COLORS[m.job] || 'var(--gold)';
+    const badge = `<span class="jb" style="background:${c}22;color:${c}; margin:0 0 0 6px; font-size:11px; padding:1px 6px;">${m.job}</span>`;
+    
+    return `
+      <div class="modal-member-row">
+        <div class="modal-m-info">
+          <span>${m.nick}</span>${badge}
+        </div>
+        <div class="modal-m-spec">${specStr}</div>
+      </div>
+    `;
+  }).join('');
+  listContainer.innerHTML = listHtml;
+
+  let destText = '';
+  if(partyData.commonGrounds && partyData.commonGrounds.length) {
+    destText = `📍 <b>목적지 사냥터:</b> ${partyData.commonGrounds.join(', ')}`;
+  } else {
+    destText = `📍 <b>목적지:</b> 중간 지점 혹은 조건 세부 조율 필요`;
+  }
+
+  const expUsers = partyData.members.filter(m => m.expBuff === 'O').map(m => m.nick);
+  const expStr = expUsers.length ? expUsers.join(', ') : '없음';
+
+  extraEl.innerHTML = `
+    <div>${destText}</div>
+    <div style="margin-top: 6px; color: var(--gold);">⚡ <b>경쿠 사용자 명단:</b> ${expStr}</div>
+  `;
+
+  modal.classList.add('open');
+}
+
+function closeMatchModal(){
+  document.getElementById('matchModal').classList.remove('open');
 }
 
 function togglePanels(){
@@ -832,9 +1210,18 @@ function togglePanels(){
 }
 
 function registerUser(){
+  if(isBannedUser) { toast('차단된 상태이므로 등록할 수 없습니다.','warn'); return; }
   if(!FB_OK){toast('서버에 연결되지 않았습니다.','warn');return;}
   const nick=document.getElementById('userNick').value.trim();
   if(!nick){toast('닉네임을 입력해주세요.','warn');return;}
+  
+  db.ref('blacklist_nicks').child(nick).once('value', snap => {
+    if(snap.val() === true) {
+      applyBanUi();
+      return;
+    }
+  });
+
   const job=document.getElementById('userJob').value;
   const hp=document.getElementById('userHp').value||'0';
   const mp=document.getElementById('userMp').value||'0';
@@ -886,7 +1273,6 @@ function registerUser(){
     squadRef.child(raidBoss).child('members').push(member)
       .then(()=>toast(`<b>${nick}</b> 님, ${raidBoss} 떼팟에 합류했습니다.`,'info'))
       .catch(()=>toast('합류 실패','warn'));
-    document.getElementById('userNick').value='';
     return;
   }
 
@@ -894,14 +1280,18 @@ function registerUser(){
     nick,job,hp,mp,category,huntingGrounds,expBuff,mildae,raidBoss,raidType,hyunggaRole,playTime,
     filterHp: reqFilterHp, filterJuMp: reqFilterJuMp, filterDoMp: reqFilterDoMp,
     blacklist: myBlacklist,
+    _ip: userIp, 
     detailsStr:details.length?details.join(', '):huntingGrounds.join(', '),
     ts:firebase.database.ServerValue.TIMESTAMP
   };
   
+  if(userIp) {
+    db.ref('queue_ips').child(nick).set(userIp);
+  }
+
   queueRef.push(entry)
     .then(()=>toast(`<b>${nick}</b> 님, 대기열에 등록되었습니다.`,'info'))
     .catch(()=>toast('등록 실패','warn'));
-  document.getElementById('userNick').value='';
 }
 
 function cancelQueue(id){
@@ -947,14 +1337,14 @@ function tryAutoMatch(){
     matchRef.push(rec).then(()=>{
       matchRef.orderByChild('ts').once('value',s=>{
         const all=[];s.forEach(c=>all.push({k:c.key,ts:c.val().ts||0}));
-        all.sort((a,b)=>a.ts-b.ts);
+        all.sort((a,b)=>all.ts-b.ts);
         const over=all.length-MATCH_KEEP;
-        for(let i=0;i<over;i++)matchRef.child(all[i].k).remove();
+        for(let i=0; i<over; i++)matchRef.child(all[i].k).remove();
       });
     });
     
-    // 비동기 트랜잭션 종료 시 즉시 알림 사운드 트리거 실행
     playMatchSound(); 
+    openMatchModal(p);
     toast(`<b>[${p.displayCategory}]</b> 파티 매칭 완료!`,'win');
 
     setTimeout(tryAutoMatch,150);
@@ -1146,11 +1536,13 @@ function checkSquadComplete(){
           .then(()=>{squadCompleting[boss]=false;});
         matchRef.orderByChild('ts').once('value',ss=>{
           const all=[];ss.forEach(c=>all.push({k:c.key,ts:c.val().ts||0}));
-          all.sort((a,b)=>a.ts-b.ts);
+          all.sort((a,b)=>all.ts-b.ts);
           for(let i=0;i<all.length-MATCH_KEEP;i++)matchRef.child(all[i].k).remove();
         });
       }).catch(()=>{squadCompleting[boss]=false;});
-      playMatchSound(); // 떼팟 결성 시에도 사운드 구동
+      playMatchSound(); 
+      
+      openMatchModal({displayCategory:`레이드-${boss}(떼팟)`, members:s.main.slice(0,10), commonGrounds:[]});
       toast(`<b>[${boss} 떼팟]</b> 10명 완성 — 결성 완료!`,'win');
     }
   });
@@ -1249,6 +1641,7 @@ function updateMatchedDisplay(){
         <span class="mtime">${p.matchTime} 결성</span>
         <span class="mdone">● 결성 완료</span>
       </div>
+      <button class="report-btn" onclick="reportFakeMatch('${p._id}')">⚠️ 허위 매칭 신고</button>
       <div class="mmem">👥 [${p.members.length}명] ${names}</div>
       <div class="mdest">${dest}</div>
       <div class="mdest" style="font-size:13.5px; color:var(--gold); font-weight:700;">⏱️ 희망 시간: [ ${times} ]</div>
