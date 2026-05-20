@@ -11,6 +11,7 @@ const firebaseConfig={
 };
 
 const FB_OK=(typeof firebase!=='undefined');
+const pageLoadTime = Date.now();
 let db=null,queueRef=null,matchRef=null,squadRef=null;
 const MATCH_KEEP=30;
 const DDAEPAT_MIN=7;
@@ -282,6 +283,22 @@ function subscribe(){
     matchedParties=arr;
     updateMatchedDisplay();
   });
+  // 새 매칭 발생 시 모든 멤버 브라우저에서 소리+팝업
+  matchRef.on('child_added', snap => {
+    const party = snap.val();
+    if(!party.ts || party.ts < pageLoadTime) return;
+    const myNick = document.getElementById('userNick').value.trim();
+    if(!myNick) return;
+    if(party.members && party.members.some(m => m.nick === myNick)) {
+      playMatchSound();
+      openMatchModal({
+        displayCategory: party.category,
+        members: party.members,
+        commonGrounds: party.commonGrounds || []
+      });
+      toast(`<b>[${party.category}]</b> 파티 매칭 완료!`, 'win');
+    }
+  });
   squadRef.on('value',snap=>{
     squads=snap.val()||{};
     updateMatchedDisplay();
@@ -517,9 +534,6 @@ function tryAutoMatch(){
         for(let i=0; i<over; i++)matchRef.child(all[i].k).remove();
       });
     });
-    playMatchSound();
-    openMatchModal(p);
-    toast(`<b>[${p.displayCategory}]</b> 파티 매칭 완료!`, 'win');
     setTimeout(tryAutoMatch,150);
   });
 }
@@ -685,9 +699,6 @@ function checkSquadComplete(){
           for(let i=0;i<all.length-MATCH_KEEP;i++)matchRef.child(all[i].k).remove();
         });
       }).catch(()=>{squadCompleting[boss]=false;});
-      playMatchSound();
-      openMatchModal({displayCategory:`레이드-${boss}(떼팟)`,members:s.main.slice(0,10),commonGrounds:[]});
-      toast(`<b>[${boss} 떼팟]</b> 10명 완성 — 결성 완료!`,'win');
     }
   });
 }
