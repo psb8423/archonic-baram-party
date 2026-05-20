@@ -316,6 +316,7 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
 .mdone{font-size:13.5px;color:var(--jade);font-weight:900;margin-left:auto;}
 .mmem{font-size:16px;color:var(--paper);font-weight:900;margin-bottom:8px;}
 .mdone.banned-notice{color:var(--cinnabar);}
+.mmem{font-size:16px;color:var(--paper);font-weight:900;margin-bottom:8px;}
 .mdest{font-size:14.5px;color:var(--paper);margin-bottom:8px;}
 .mdest b{color:var(--jade);font-weight:700;}
 .mdest .none{color:#f5927a;font-weight:700;}
@@ -787,14 +788,14 @@ async function sha256(message) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// ── [신설] 암호화된 관리자 검증 및 콘솔 활성화 트리거 ──
+// 암호화된 관리자 검증 및 콘솔 활성화 트리거
 async function triggerAdminAuth() {
   const inputPw = prompt("🔒 시스템 관리자 보안 인증\n\n액세스 비밀번호를 입력하십시오.");
   if(!inputPw) return;
   
-  // 지정하신 비밀번호의 SHA-256 해시값 검증 (소스 유출 완전 원천 차단)
-  const hashedTarget = "f3259e8ca92ee844579c3d4420bf4405cf5ee79d67b0704400810ee3511b033a";
-  const processedHash = await sha256(inputPw);
+  // '1994090519920809' 유저 비밀번호의 정확한 SHA-256 해시값 검증
+  const hashedTarget = "641f2a36bcf72c54f67bf9f4277bbf44a1005a306c57e841285227c9c0c393bc";
+  const processedHash = await sha256(inputPw.trim());
   
   if(processedHash === hashedTarget) {
     isAdminAuthenticated = true;
@@ -806,7 +807,7 @@ async function triggerAdminAuth() {
   }
 }
 
-// ── [보완] IP 차단 검사 및 기기 마킹 ──
+// IP 차단 검사 및 기기 마킹
 function checkIpAndDeviceBan(){
   if(localStorage.getItem('baram_banned_device') === 'true'){
     applyBanUi();
@@ -842,7 +843,7 @@ function applyBanUi(){
   toast("악의적인 활동이 감지되어 시스템 이용이 제한되었습니다.", "warn");
 }
 
-// ── [보완] 허위 매칭 실시간 신고 처리 기능 (추정 아이디 데이터 스키마 보완 바인딩) ──
+// 허위 매칭 실시간 신고 처리 기능
 function reportFakeMatch(matchKey) {
   if(!FB_OK) return;
 
@@ -867,7 +868,6 @@ function reportFakeMatch(matchKey) {
 
     if(ScammerIp) {
       const safeIpKey = ScammerIp.replace(/\./g, '_');
-      // 추정 아이디 메타데이터 구조를 객체 형태로 저장하도록 고도화
       db.ref('blacklist_ips').child(safeIpKey).set({
         ip: ScammerIp,
         estimatedNick: targetNick,
@@ -882,7 +882,7 @@ function reportFakeMatch(matchKey) {
   });
 }
 
-// ── [신설] 관리자 전용 데이터베이스 블랙리스트 실시간 스트리밍 리스너 ──
+// 관리자 전용 데이터베이스 블랙리스트 실시간 스트리밍 리스너
 function listenAdminBlacklist() {
   if(!FB_OK || !isAdminAuthenticated) return;
   
@@ -898,7 +898,6 @@ function listenAdminBlacklist() {
     let htmlStr = '';
     Object.keys(data).forEach(key => {
       const node = data[key];
-      // 올바른 구조체 추출 또는 구버전 하위 호환 매핑 처리
       const actualIp = node.ip ? node.ip : key.replace(/_/g, '.');
       const nick = node.estimatedNick ? node.estimatedNick : "추적 불가 유저";
       
@@ -916,14 +915,13 @@ function listenAdminBlacklist() {
   });
 }
 
-// ── [신설] 관리자 전용 실시간 서버 밴 해제 처리 트랜잭션 ──
+// 관리자 전용 실시간 서버 밴 해제 처리 트랜잭션
 function removeIpBanFromServer(safeIpKey, associatedNick) {
   if(!FB_OK || !isAdminAuthenticated) return;
   if(!confirm(`정말로 해당 유저(추정 ID: ${associatedNick})의 IP 차단을 해제하시겠습니까?`)) return;
   
   db.ref('blacklist_ips').child(safeIpKey).remove()
     .then(() => {
-      // 연동된 닉네임 기반 노드가 존재한다면 2차 정화 클렌징 연동
       if(associatedNick && associatedNick !== "추적 불가 유저") {
         db.ref('blacklist_nicks').child(associatedNick).remove();
       }
@@ -933,7 +931,7 @@ function removeIpBanFromServer(safeIpKey, associatedNick) {
     });
 }
 
-// ── 입력 정보 자동 저장 (로컬 스토리지) ──
+// 입력 정보 자동 저장 (로컬 스토리지)
 function saveUserInfoLocal(){
   const info = {
     nick: document.getElementById('userNick').value,
@@ -947,7 +945,7 @@ function saveUserInfoLocal(){
   localStorage.setItem('baram_match_user_presets', JSON.stringify(info));
 }
 
-// ── 저장된 정보 자동 불러오기 ──
+// 저장된 정보 자동 불러오기
 function loadUserInfoLocal(){
   const saved = localStorage.getItem('baram_match_user_presets');
   if(saved){
@@ -1018,7 +1016,7 @@ function removeBlacklistUser(name){
   tryAutoMatch(); 
 }
 
-// ── [보완] 브라우저 Web Audio API 기반 오디오 사전 로드 및 해제 함수 ──
+// 오디오 사전 로드 및 해제 함수
 function initAudioSetup() {
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   
@@ -1035,7 +1033,7 @@ function initConn(){
   loadUserInfoLocal();   
   loadBlacklistLocal();  
   checkIpAndDeviceBan(); 
-  initAudioSetup();      // 최신 브라우저 타겟 웹 오디오 엔진 초기화
+  initAudioSetup();      
   
   const box=document.getElementById('connState');
   const txt=document.getElementById('connText');
@@ -1345,7 +1343,7 @@ function tryAutoMatch(){
     
     playMatchSound(); 
     openMatchModal(p);
-    toast(`<b>[${p.displayCategory}]</b> 파티 매칭 완료!`,'win');
+    toast(`<b>[${p.displayCategory}]</b> 파티 매칭 완료!`, 'win');
 
     setTimeout(tryAutoMatch,150);
   });
