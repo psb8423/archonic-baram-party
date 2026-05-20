@@ -6,7 +6,7 @@
 <title>옛날바람 파티 매칭소</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gugi&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Song+Myung&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
@@ -56,10 +56,10 @@ body::before{
 }
 .masthead .crest{font-size:clamp(28px,6vw,40px);line-height:1;filter:drop-shadow(0 0 8px rgba(201,162,75,.35));}
 .masthead h1{
-  font-family:'Gugi',cursive;font-weight:400;
-  font-size:clamp(22px,5.5vw,38px);margin:8px 0 4px;
-  color:var(--paper);letter-spacing:.04em;
-  text-shadow:0 0 18px rgba(201,162,75,.25);
+  font-family:'Song Myung', serif; font-weight:400; /* 송명체 적용 */
+  font-size:clamp(24px,6vw,42px);margin:10px 0 6px;
+  color:var(--paper);letter-spacing:.06em;
+  text-shadow:0 0 15px rgba(201,162,75,.3);
 }
 .masthead .sub{
   font-family:'Gowun Batang',serif;color:var(--gold);
@@ -226,7 +226,7 @@ input::placeholder{color:var(--paper-faint);}
 .queue-panel .panel-b{padding:14px;}
 .queue-count{
   margin-left:auto;font-size:12px;font-weight:900;color:var(--ink);
-  background:var(--gold);border-radius999px;padding:2px 10px;font-family:'Noto Sans KR';
+  background:var(--gold);border-radius:999px;padding:2px 10px;font-family:'Noto Sans KR';
 }
 .qlist{display:flex;flex-direction:column;gap:9px;max-height:60vh;overflow-y:auto;}
 @media(max-width:860px){.qlist{max-height:none;}}
@@ -816,6 +816,9 @@ function tryAutoMatch(){
   if(matchBusy)return;            
   matchBusy=true;
 
+  // ⏱️ 2시간 지난 완료 파티 자동 정리 로직 실행
+  cleanOldMatchedParties();
+
   let plannedParty=null;          
 
   queueRef.transaction(current=>{
@@ -838,7 +841,7 @@ function tryAutoMatch(){
       members:p.members.map(({_id,ts,...rest})=>rest),
       matchTime:`${n.getHours()}:${String(n.getMinutes()).padStart(2,'0')}`,
       commonGrounds:p.commonGrounds||[],
-      ts:Date.now()
+      ts:Date.now() // 삭제 기준이 될 생성 타임스탬프
     };
     matchRef.push(rec).then(()=>{
       matchRef.orderByChild('ts').once('value',s=>{
@@ -855,6 +858,25 @@ function tryAutoMatch(){
   });
 }
 
+// ⏱️ 2시간 경과 파티 삭제 서브 함수
+function cleanOldMatchedParties(){
+  if(!FB_OK) return;
+  const now = Date.now();
+  const twoHoursMs = 2 * 60 * 60 * 1000; // 2시간 = 7,200,000ms
+
+  matchRef.once('value', snap => {
+    const data = snap.val();
+    if(!data) return;
+    Object.keys(data).forEach(key => {
+      const p = data[key];
+      // 결성 시간(ts)이 있고, 현재 시간과의 차이가 2시간 이상이면 제거
+      if(p.ts && (now - p.ts >= twoHoursMs)){
+        matchRef.child(key).remove();
+      }
+    });
+  });
+}
+
 /* ── 최소 필터 스펙 및 블랙리스트 상호 포함 조건 전면 검증 함수 ── */
 function checkSpecsAndBlacklist(u1, u2, u3=null) {
   const users = [u1, u2];
@@ -867,7 +889,6 @@ function checkSpecsAndBlacklist(u1, u2, u3=null) {
     for(let j=0; j<users.length; j++){
       if(i === j) continue;
       const peer = users[j];
-      // 내 차단 목록에 상대의 닉네임이 정확히 포함되어 있는지 체크
       if(myBanList.includes(peer.nick)) return false;
     }
   }
@@ -877,7 +898,7 @@ function checkSpecsAndBlacklist(u1, u2, u3=null) {
     const target = users[i];
     const fHp = parseInt(target.filterHp || '0');
     const fJu = parseInt(target.filterJuMp || '0');
-    const fDo = parseInt(target.filterDoMp || '0');
+    const fDo = parseInt(target.filterDosaMp || '0');
     
     for(let j=0; j<users.length; j++) {
       if(i === j) continue;
@@ -1023,7 +1044,8 @@ function checkSquadComplete(){
         category:`레이드-${boss}(떼팟)`,
         members:s.main.slice(0,10).map(({_id,ts,...r})=>r),
         matchTime:`${n.getHours()}:${String(n.getMinutes()).padStart(2,'0')}`,
-        commonGrounds:[],ts:Date.now()
+        commonGrounds:[],
+        ts:Date.now() // 떼팟도 동일하게 자동 삭제 타임스탬프 부여
       };
       matchRef.push(rec).then(()=>{
         const updates={};
@@ -1126,7 +1148,6 @@ function updateMatchedDisplay(){
     const exp=p.members.filter(m=>m.expBuff==='O').map(m=>m.nick);
     const mil=p.members.filter(m=>m.mildae==='O').map(m=>m.nick);
     
-    // 매칭 인원들의 사냥 시간 취합 표시
     const times=p.members.map(m=>`${m.nick}:${m.playTime||'30분'}`).join(', ');
 
     const c=document.createElement('div');c.className='mcard';
