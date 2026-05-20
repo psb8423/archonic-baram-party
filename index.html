@@ -82,14 +82,16 @@ body::before{
 .conn.down{color:var(--cinnabar);}
 
 /* ── 레이아웃 ── */
-.grid{display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;}
+.grid{display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start;}
 @media(max-width:860px){.grid{grid-template-columns:1fr;}}
 
 .panel{
   background:linear-gradient(180deg,var(--panel-2),var(--panel));
   border:1px solid var(--line);border-radius:10px;
   box-shadow:0 8px 30px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.03);
+  margin-bottom:20px;
 }
+.panel:last-child{margin-bottom:0;}
 .panel-h{
   display:flex;align-items:center;gap:8px;
   padding:14px 18px;border-bottom:1px solid var(--line-soft);
@@ -222,13 +224,17 @@ input::placeholder{color:var(--paper-faint);}
 .f-cell .sx{font-size:11.5px;color:var(--paper-faint);white-space:nowrap;}
 .filter-note{font-size:11.5px;color:var(--gold-soft);text-align:center;margin-top:11px;font-family:'Gowun Batang',serif;}
 
-/* ── 대기열 사이드바 ── */
-.queue-panel .panel-b{padding:14px;}
+/* ── 우측 대기열 및 차단 목록 사이드바 ── */
+.queue-panel .panel-b, .blacklist-panel .panel-b{padding:14px;}
 .queue-count{
   margin-left:auto;font-size:12px;font-weight:900;color:var(--ink);
   background:var(--gold);border-radius:999px;padding:2px 10px;font-family:'Noto Sans KR';
 }
-.qlist{display:flex;flex-direction:column;gap:9px;max-height:60vh;overflow-y:auto;}
+.blacklist-count{
+  margin-left:auto;font-size:12px;font-weight:900;color:#fff;
+  background:var(--cinnabar);border-radius:999px;padding:2px 10px;font-family:'Noto Sans KR';
+}
+.qlist{display:flex;flex-direction:column;gap:9px;max-height:45vh;overflow-y:auto;}
 @media(max-width:860px){.qlist{max-height:none;}}
 .qlist::-webkit-scrollbar{width:6px;}
 .qlist::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px;}
@@ -249,6 +255,19 @@ input::placeholder{color:var(--paper-faint);}
 }
 .x-btn:hover{color:var(--cinnabar);background:rgba(192,73,47,.12);}
 .empty{text-align:center;color:var(--paper-faint);padding:28px 10px;font-size:13px;font-family:'Gowun Batang',serif;}
+
+/* 차단 리스트 칩 UI */
+.blist-tags{display:flex;flex-wrap:wrap;gap:6px;}
+.b-tag{
+  display:inline-flex;align-items:center;gap:5px;background:var(--ink-2);
+  border:1px solid var(--line-soft);border-radius:6px;padding:4px 8px;
+  font-size:12.5px;color:var(--paper-dim);
+}
+.b-tag .b-del{
+  background:none;border:none;color:var(--paper-faint);font-size:14px;
+  cursor:pointer;padding:0;line-height:1;display:flex;align-items:center;
+}
+.b-tag .b-del:hover{color:var(--cinnabar);}
 
 /* ── 매칭 완료 ── */
 .match-panel{margin-top:20px;}
@@ -531,15 +550,17 @@ input::placeholder{color:var(--paper-faint);}
 
           <div class="blacklist-box">
             <label class="lbl" style="color:var(--cinnabar);">🚫 내 차단 목록 관리 (이 사람과는 매칭 차단)</label>
-            <input type="text" id="blacklistInput" placeholder="차단할 닉네임들을 쉼표(,)로 구분해서 입력 (예: 홍길동, 임꺽정)" oninput="saveBlacklistLocal()">
-            <div class="filter-note" style="color:var(--paper-dim); text-align:left; margin-top:6px;">※ 입력한 유저와는 서로 매칭 리스트에서 완전히 제외됩니다. (자동 저장됨)</div>
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="blacklistInput" placeholder="차단할 닉네임들을 쉼표(,)로 구분 혹은 개별 입력" oninput="syncBlacklistFromInput()">
+            </div>
+            <div class="filter-note" style="color:var(--paper-dim); text-align:left; margin-top:6px;">※ 우측 사이드바 하단에서 현재 저장된 차단 리스트를 모아보고 해제할 수 있습니다.</div>
           </div>
 
         </div>
       </div>
 
       <div class="panel match-panel">
-        <div class="panel-h"><span class="ico">🎉</span> 매칭 완료된 파티</div>
+        <div class="panel-h"><span class="ico">🎉</span> 매칭 완료된 파티 (2시간 뒤 자동 삭제)</div>
         <div class="panel-b">
           <div id="matchSuccessList">
             <div class="empty">아직 결성된 파티가 없습니다.</div>
@@ -548,14 +569,28 @@ input::placeholder{color:var(--paper-faint);}
       </div>
     </div>
 
-    <div class="panel queue-panel">
-      <div class="panel-h">
-        <span class="ico">👥</span> 대기열
-        <span class="queue-count" id="qCount">0</span>
+    <div>
+      <div class="panel queue-panel">
+        <div class="panel-h">
+          <span class="ico">👥</span> 대기열
+          <span class="queue-count" id="qCount">0</span>
+        </div>
+        <div class="panel-b">
+          <div id="queueList" class="qlist">
+            <div class="empty">대기 중인 인원이 없습니다.</div>
+          </div>
+        </div>
       </div>
-      <div class="panel-b">
-        <div id="queueList" class="qlist">
-          <div class="empty">대기 중인 인원이 없습니다.</div>
+
+      <div class="panel blacklist-panel">
+        <div class="panel-h">
+          <span class="ico">🚫</span> 내 차단 목록
+          <span class="blacklist-count" id="bCount">0</span>
+        </div>
+        <div class="panel-b">
+          <div id="blacklistContainer" class="blist-tags">
+            <div class="empty" style="padding:12px 0; width:100%;">차단된 유저가 없습니다.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -602,22 +637,59 @@ let waitingQueue=[];
 let matchedParties=[];
 let squads={};   
 
-// 로컬 차단 목록 로드 및 저장
+// 로컬 차단 목록 로드 및 렌더링
 function loadBlacklistLocal(){
   const saved = localStorage.getItem('baram_match_blacklist');
   if(saved){
     document.getElementById('blacklistInput').value = saved;
   }
+  renderBlacklistSide();
 }
-function saveBlacklistLocal(){
+
+// 왼쪽 Input에서 작성된 데이터를 로컬 저장소와 동기화하고 우측 UI 리렌더링
+function syncBlacklistFromInput(){
   const val = document.getElementById('blacklistInput').value;
   localStorage.setItem('baram_match_blacklist', val);
+  renderBlacklistSide();
 }
 
 // 닉네임 정형화 배열 반환
 function getMyBlacklistArray(){
   const val = document.getElementById('blacklistInput').value;
   return val.split(',').map(s=>s.trim()).filter(s=>s.length>0);
+}
+
+// 우측 사이드바에 차단 리스트 칩 노출 및 카운트 갱신
+function renderBlacklistSide(){
+  const container = document.getElementById('blacklistContainer');
+  const countEl = document.getElementById('bCount');
+  const arr = getMyBlacklistArray();
+  
+  countEl.textContent = arr.length;
+  
+  if(!arr.length){
+    container.innerHTML = '<div class="empty" style="padding:12px 0; width:100%;">차단된 유저가 없습니다.</div>';
+    return;
+  }
+  
+  container.innerHTML = arr.map(name => `
+    <span class="b-tag">
+      <span>${name}</span>
+      <button class="b-del" onclick="removeBlacklistUser('${name}')" title="차단 해제">×</button>
+    </span>
+  `).join('');
+}
+
+// 개별 차단 유저 제거 (우측 리스트에서 X 누를 시)
+function removeBlacklistUser(name){
+  let arr = getMyBlacklistArray();
+  arr = arr.filter(n => n !== name);
+  const updatedVal = arr.join(', ');
+  document.getElementById('blacklistInput').value = updatedVal;
+  localStorage.setItem('baram_match_blacklist', updatedVal);
+  renderBlacklistSide();
+  toast(`<b>${name}</b> 님의 차단을 해제했습니다.`, 'info');
+  tryAutoMatch(); // 차단 해제 시 새로 갱신 매칭 유도
 }
 
 function initConn(){
@@ -693,12 +765,11 @@ function syncJobColor(){
   document.getElementById('jobWrap').style.setProperty('--swatch',JOB_COLORS[job]||'var(--gold)');
 }
 
-// 오디오 연속 재생이슈 전면 해결용 재생 모듈
 function playMatchSound(){
   try{
     const AC = window.AudioContext || window.webkitAudioContext;
     if(!AC) return;
-    const ctx = new AC(); // 재생할 때마다 독립된 오디오 컨텍스트 및 주파수 노드 세트를 새로 활성화해 브라우저 상태를 완벽히 리셋
+    const ctx = new AC(); 
     [[392.00,0,0.4],[329.63,0.18,0.6]].forEach(([f,s,e])=>{
       const o=ctx.createOscillator(),g=ctx.createGain();
       o.type='sine';o.frequency.setValueAtTime(f,ctx.currentTime+s);
@@ -742,7 +813,6 @@ function registerUser(){
   const reqFilterJuMp = document.getElementById('filterHyeonjaMp').value || '0';
   const reqFilterDoMp = document.getElementById('filterDosaMp').value || '0';
   
-  // 내가 작성해둔 블랙리스트를 배열로 포함하여 등록
   const myBlacklist = getMyBlacklistArray();
 
   let huntingGrounds=[],expBuff='X',mildae='X',details=[],raidBoss='',raidType='',hyunggaRole='';
@@ -778,7 +848,6 @@ function registerUser(){
     details.push(`보스:${raidBoss}`,`방식:${raidType}`);
   }
 
-  // 떼팟 예외처리
   if(category==='레이드' && raidType==='떼팟'){
     const member={nick,job,hp,mp,playTime,ts:Date.now()};
     squadRef.child(raidBoss).child('members').push(member)
@@ -816,7 +885,6 @@ function tryAutoMatch(){
   if(matchBusy)return;            
   matchBusy=true;
 
-  // ⏱️ 2시간 지난 완료 파티 자동 정리 로직 실행
   cleanOldMatchedParties();
 
   let plannedParty=null;          
@@ -841,7 +909,7 @@ function tryAutoMatch(){
       members:p.members.map(({_id,ts,...rest})=>rest),
       matchTime:`${n.getHours()}:${String(n.getMinutes()).padStart(2,'0')}`,
       commonGrounds:p.commonGrounds||[],
-      ts:Date.now() // 삭제 기준이 될 생성 타임스탬프
+      ts:Date.now()
     };
     matchRef.push(rec).then(()=>{
       matchRef.orderByChild('ts').once('value',s=>{
@@ -858,18 +926,16 @@ function tryAutoMatch(){
   });
 }
 
-// ⏱️ 2시간 경과 파티 삭제 서브 함수
 function cleanOldMatchedParties(){
   if(!FB_OK) return;
   const now = Date.now();
-  const twoHoursMs = 2 * 60 * 60 * 1000; // 2시간 = 7,200,000ms
+  const twoHoursMs = 2 * 60 * 60 * 1000;
 
   matchRef.once('value', snap => {
     const data = snap.val();
     if(!data) return;
     Object.keys(data).forEach(key => {
       const p = data[key];
-      // 결성 시간(ts)이 있고, 현재 시간과의 차이가 2시간 이상이면 제거
       if(p.ts && (now - p.ts >= twoHoursMs)){
         matchRef.child(key).remove();
       }
@@ -877,12 +943,10 @@ function cleanOldMatchedParties(){
   });
 }
 
-/* ── 최소 필터 스펙 및 블랙리스트 상호 포함 조건 전면 검증 함수 ── */
 function checkSpecsAndBlacklist(u1, u2, u3=null) {
   const users = [u1, u2];
   if(u3) users.push(u3);
   
-  // 1. 블랙리스트 상호 교차 검증 (한쪽이라도 상대방을 차단 목록에 넣어두었다면 불합격)
   for(let i=0; i<users.length; i++){
     const me = users[i];
     const myBanList = me.blacklist || [];
@@ -893,7 +957,6 @@ function checkSpecsAndBlacklist(u1, u2, u3=null) {
     }
   }
 
-  // 2. 최소 스펙 필터 검증
   for(let i=0; i<users.length; i++) {
     const target = users[i];
     const fHp = parseInt(target.filterHp || '0');
@@ -915,7 +978,6 @@ function checkSpecsAndBlacklist(u1, u2, u3=null) {
 }
 
 function findParty(list){
-  // 1) 격도 1대1 (일반 카테고리)
   {
     const pool=list.filter(u=>u.category==='격도1대1');
     const a=pool.find(u=>u.job!=='도사'), d=pool.find(u=>u.job==='도사'&&u!==a);
@@ -924,7 +986,6 @@ function findParty(list){
       if(cg.length > 0) return {displayCategory:'격도(1대1)', members:[a,d], commonGrounds:cg};
     }
   }
-  // 2) 레이드 내 '격도 1대1' (2인 방식)
   {
     const pool=list.filter(u=>u.category==='레이드' && u.raidType==='격도1대1');
     for(const u1 of pool) {
@@ -933,7 +994,6 @@ function findParty(list){
       if(u2) return {displayCategory:`레이드-${u1.raidBoss}(1대1)`, members:[u1, u2], commonGrounds:[]};
     }
   }
-  // 3) 떱헬 (주술사 + 주술사 2인 매칭)
   {
     const pool=list.filter(u=>u.category==='떱헬' && u.job==='주술사');
     if(pool.length >= 2){
@@ -948,13 +1008,11 @@ function findParty(list){
       }
     }
   }
-  // 4) 흉가노노
   {
     const pool=list.filter(u=>u.category==='흉가노노');
     const a=pool.find(u=>u.hyunggaRole==='격수'),d=pool.find(u=>u.hyunggaRole==='도사'&&u!==a);
     if(a&&d&&checkSpecsAndBlacklist(a, d))return{displayCategory:'흉가노노',members:[a,d],commonGrounds:[]};
   }
-  // 5) 레이드 (격도술 - 3인 정예)
   {
     const pool=list.filter(u=>u.category==='레이드'&&u.raidType==='격도술');
     const bosses = [...new Set(pool.map(u=>u.raidBoss))];
@@ -973,7 +1031,6 @@ function findParty(list){
       }
     }
   }
-  // 6) 공통 3인 카테고리 매칭 (격도술, 반반밀대, 밀격쩔, 차균)
   {
     const cats=['격도술','반반밀대','밀격쩔','차균'];
     for(const cat of cats){
@@ -1045,7 +1102,7 @@ function checkSquadComplete(){
         members:s.main.slice(0,10).map(({_id,ts,...r})=>r),
         matchTime:`${n.getHours()}:${String(n.getMinutes()).padStart(2,'0')}`,
         commonGrounds:[],
-        ts:Date.now() // 떼팟도 동일하게 자동 삭제 타임스탬프 부여
+        ts:Date.now()
       };
       matchRef.push(rec).then(()=>{
         const updates={};
