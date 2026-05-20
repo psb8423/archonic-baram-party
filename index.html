@@ -143,6 +143,7 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
 .action-row{
   display:flex; gap:14px; align-items:flex-end; margin-top:6px; width:100%;
 }
+.action-row .field { margin-bottom: 0; }
 .action-row .field-main-cat { flex: 1.5; min-width: 0; }
 .action-row .field-play-time { flex: 1; min-width: 0; }
 .action-row .field-btn { width: 130px; flex-shrink: 0; }
@@ -794,7 +795,7 @@ async function triggerAdminAuth() {
   if(!inputPw) return;
   
   // '1994090519920809' 유저 비밀번호의 정확한 SHA-256 해시값 검증
-  const hashedTarget = "641f2a36bcf72c54f67bf9f4277bbf44a1005a306c57e841285227c9c0c393bc";
+  const hashedTarget = "197d43dcc040ab9a6a1b802e221c69f88420981cb61705883fed66953352bff3";
   const processedHash = await sha256(inputPw.trim());
   
   if(processedHash === hashedTarget) {
@@ -1018,15 +1019,17 @@ function removeBlacklistUser(name){
 
 // 오디오 사전 로드 및 해제 함수
 function initAudioSetup() {
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  } catch(e) {
+    console.log("AudioContext 초기화 불가:", e);
+    return;
+  }
   fetch('invite.mp3')
-    .then(response => response.arrayBuffer())
+    .then(r => r.arrayBuffer())
     .then(data => audioCtx.decodeAudioData(data))
-    .then(buffer => {
-      audioBuffer = buffer;
-    })
-    .catch(err => console.log("알림음 버퍼 로드 대기 중 (정상):", err));
+    .then(buffer => { audioBuffer = buffer; })
+    .catch(err => console.log("알림음 로드 실패:", err));
 }
 
 function initConn(){
@@ -1127,19 +1130,22 @@ function syncJobColor(){
 }
 
 function playMatchSound(){
-  if (!audioCtx || !audioBuffer) {
-    const legacyAudio = new Audio('invite.mp3');
-    legacyAudio.play().catch(e => console.log("백업 오디오 재생 생략"));
-    return;
-  }
-  
-  try {
-    const soundSource = audioCtx.createBufferSource();
-    soundSource.buffer = audioBuffer;
-    soundSource.connect(audioCtx.destination);
-    soundSource.start(0);
-  } catch(e) {
-    console.error("오디오 출력 스트림 에러:", e);
+  const doPlay = () => {
+    if (audioCtx && audioBuffer) {
+      try {
+        const src = audioCtx.createBufferSource();
+        src.buffer = audioBuffer;
+        src.connect(audioCtx.destination);
+        src.start(0);
+        return;
+      } catch(e) { console.error("Web Audio 재생 실패:", e); }
+    }
+    new Audio('invite.mp3').play().catch(()=>{});
+  };
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().then(doPlay).catch(doPlay);
+  } else {
+    doPlay();
   }
 }
 
@@ -1155,14 +1161,17 @@ function openMatchModal(partyData){
     const isSlayer = (m.job === '전사' || m.job === '도적');
     const specStr = isSlayer ? `체력 ${m.hp}만` : `마력 ${m.mp}만`;
     const c = JOB_COLORS[m.job] || 'var(--gold)';
-    const badge = `<span class="jb" style="background:${c}22;color:${c}; margin:0 0 0 6px; font-size:11px; padding:1px 6px;">${m.job}</span>`;
-    
+    const badge = `<span class="jb" style="background:${c}22;color:${c}; margin:0 0 0 5px; font-size:11px; padding:1px 6px;">${m.job}</span>`;
+    const expTag = m.expBuff === 'O'
+      ? `<span style="color:var(--jade);font-size:11.5px;font-weight:900;margin-left:5px;">⚡경쿠</span>`
+      : `<span style="color:var(--paper-faint);font-size:11.5px;margin-left:5px;">경쿠X</span>`;
+    const timeTag = `<span style="color:var(--gold-soft);font-size:11.5px;font-weight:700;margin-left:5px;">⏱${m.playTime||'30분'}</span>`;
     return `
       <div class="modal-member-row">
-        <div class="modal-m-info">
-          <span>${m.nick}</span>${badge}
+        <div class="modal-m-info" style="flex-wrap:wrap;gap:2px;">
+          <span style="font-weight:700;">${m.nick}</span>${badge}${expTag}
         </div>
-        <div class="modal-m-spec">${specStr}</div>
+        <div class="modal-m-spec" style="white-space:nowrap;">${specStr}${timeTag}</div>
       </div>
     `;
   }).join('');
@@ -1174,14 +1183,7 @@ function openMatchModal(partyData){
   } else {
     destText = `📍 <b>목적지:</b> 중간 지점 혹은 조건 세부 조율 필요`;
   }
-
-  const expUsers = partyData.members.filter(m => m.expBuff === 'O').map(m => m.nick);
-  const expStr = expUsers.length ? expUsers.join(', ') : '없음';
-
-  extraEl.innerHTML = `
-    <div>${destText}</div>
-    <div style="margin-top: 6px; color: var(--gold);">⚡ <b>경쿠 사용자 명단:</b> ${expStr}</div>
-  `;
+  extraEl.innerHTML = `<div>${destText}</div>`;
 
   modal.classList.add('open');
 }
