@@ -251,6 +251,13 @@ function syncBlacklistFromInput(){
   renderBlacklistSide();
 }
 
+function addBlacklistEntry(){
+  const val = document.getElementById('blacklistInput').value.trim();
+  if(!val) return;
+  syncBlacklistFromInput();
+  toast('등록되었습니다. 취소할 수 있습니다.', 'info');
+}
+
 function getMyBlacklistArray(){
   const val = document.getElementById('blacklistInput').value;
   return val.split(',').map(s=>s.trim()).filter(s=>s.length>0);
@@ -645,8 +652,13 @@ function registerUser(){
 function cancelQueue(id){
   if(!FB_OK)return;
   const u=waitingQueue.find(x=>x._id===id);
+  if(!u)return;
+  if(userIp && u._ip !== userIp){
+    toast('본인의 대기열만 취소할 수 있습니다.','warn');
+    return;
+  }
   queueRef.child(id).remove()
-    .then(()=>{if(u)toast(`<b>${u.nick}</b> 님의 대기를 취소했습니다.`,'info');})
+    .then(()=>toast(`<b>${u.nick}</b> 님의 대기를 취소했습니다.`,'info'))
     .catch(()=>toast('취소 실패','warn'));
 }
 
@@ -670,6 +682,12 @@ function tryAutoMatch(){
     matchBusy=false;
     if(err||!committed||!plannedParty)return;
     const p=plannedParty;
+    const matchedNicks=new Set(p.members.map(m=>m.nick));
+    queueRef.once('value',snap=>{
+      const q=snap.val();
+      if(!q)return;
+      Object.keys(q).forEach(key=>{if(matchedNicks.has(q[key].nick))queueRef.child(key).remove();});
+    });
     const n=new Date();
     const rec={
       category:p.displayCategory,
@@ -942,6 +960,7 @@ function updateQueueDisplay(){
       const statLabel=isSl?'체력':'마력';
       return `<div style="margin-top:4px;font-size:12.5px;color:var(--paper-dim);">👥 일행: ${jobBadge(m.job)} <b>${m.nick}</b>${m.stat&&m.stat!=='0'?` · ${statLabel} ${m.stat}만`:''}</div>`;
     })() : '';
+    const isMyEntry = userIp ? u._ip === userIp : false;
     d.innerHTML=`
       <div style="flex:1;min-width:0;">
         <div><span class="nm">${u.nick}</span>${jobBadge(u.job)}</div>
@@ -949,7 +968,7 @@ function updateQueueDisplay(){
         ${companionHtml}
         <div class="mode">➔ ${u.category} <span style="color:var(--paper-dim);">[${sub}]</span></div>
       </div>
-      <button class="x-btn" onclick="cancelQueue('${u._id}')" title="대기 취소">×</button>`;
+      ${isMyEntry?`<button class="x-btn" onclick="cancelQueue('${u._id}')" title="대기 취소">×</button>`:''}` ;
     L.appendChild(d);
   });
 }

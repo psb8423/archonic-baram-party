@@ -301,7 +301,8 @@
           <div class="blacklist-box">
             <label class="lbl wrap-ok" style="color:var(--cinnabar); font-size:15.5px;">🚫 내 차단 목록 관리<br class="mobile-br"> (이 사람과는 매칭 차단)</label>
             <div style="display:flex;gap:8px;">
-              <input type="text" id="blacklistInput" placeholder="차단할 닉네임들을 쉼표(,)로 구분 혹은 개별 입력" oninput="syncBlacklistFromInput()">
+              <input type="text" id="blacklistInput" placeholder="차단할 닉네임들을 쉼표(,)로 구분 혹은 개별 입력" oninput="syncBlacklistFromInput()" onkeydown="if(event.key==='Enter')addBlacklistEntry()">
+              <button class="reg-btn" onclick="addBlacklistEntry()">등록하기</button>
             </div>
             <div class="filter-note" style="color:var(--paper-dim); text-align:left; margin-top:6px; font-weight:normal;">※ 우측 사이드바 하단에서 현재 저장된 차단 리스트를 모아보고 해제할 수 있습니다.</div>
           </div>

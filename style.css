@@ -285,6 +285,12 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
   cursor:pointer;padding:0;line-height:1;display:flex;align-items:center;
 }
 .b-tag .b-del:hover{color:var(--cinnabar);}
+.reg-btn{
+  flex-shrink:0;padding:0 14px;height:42px;border:1px solid var(--cinnabar);
+  background:none;color:var(--cinnabar);border-radius:7px;font-size:14.5px;
+  cursor:pointer;font-family:'Gowun Batang',serif;font-weight:700;transition:all .14s;white-space:nowrap;
+}
+.reg-btn:hover{background:rgba(220,91,64,.15);}
 
 /* ── 매칭 완료 ── */
 .match-panel{margin-top:24px;}
