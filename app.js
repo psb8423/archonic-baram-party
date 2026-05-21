@@ -403,14 +403,50 @@ function toggleCompanionPanel(type) {
 function toggleRaidTypeCompanion() {
   const rt = document.getElementById('raidType').value;
   const wrap = document.getElementById('raidCompanionWrap');
-  if(!wrap) return;
-  wrap.style.display = rt === '격도술' ? 'block' : 'none';
+  const ddaepatWrap = document.getElementById('raidDdaepatCompanionWrap');
+  if(wrap) wrap.style.display = rt === '격도술' ? 'block' : 'none';
+  if(ddaepatWrap) ddaepatWrap.style.display = rt === '떼팟' ? 'block' : 'none';
   if(rt !== '격도술') {
     const cb = document.getElementById('hasPartyRaid');
     if(cb) cb.checked = false;
     const panel = document.getElementById('companionRaid');
     if(panel) panel.style.display = 'none';
   }
+  if(rt !== '떼팟') {
+    const cb = document.getElementById('hasPartyDdaepat');
+    if(cb) cb.checked = false;
+    const panel = document.getElementById('companionDdaepat');
+    if(panel) panel.style.display = 'none';
+  }
+}
+
+function toggleDdaepatCompanion() {
+  const checked = document.getElementById('hasPartyDdaepat').checked;
+  const panel = document.getElementById('companionDdaepat');
+  if(!panel) return;
+  panel.style.display = checked ? 'block' : 'none';
+  if(checked && document.getElementById('ddaepatCompanionList').children.length === 0) {
+    addDdaepatCompanion();
+  }
+}
+
+function addDdaepatCompanion() {
+  const list = document.getElementById('ddaepatCompanionList');
+  const row = document.createElement('div');
+  row.className = 'companion-row';
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 1.5fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end;';
+  row.innerHTML = `
+    <div class="field" style="margin-bottom:0;"><label class="lbl">직업</label>
+      <select><option value="도사">도사</option><option value="주술사">주술사</option><option value="전사">전사</option><option value="도적">도적</option></select>
+    </div>
+    <div class="field" style="margin-bottom:0;"><label class="lbl">닉네임</label>
+      <input type="text" placeholder="닉네임 입력">
+    </div>
+    <div class="field" style="margin-bottom:0;"><label class="lbl">체/마(만)</label>
+      <input type="number" placeholder="0">
+    </div>
+    <button type="button" class="x-btn" style="margin-bottom:0;align-self:flex-end;" onclick="this.closest('.companion-row').remove()">×</button>`;
+  list.appendChild(row);
 }
 
 function makeCompanionEntry(leader) {
@@ -548,6 +584,12 @@ function registerUser(){
     document.querySelectorAll('#panelMilgyeok input[type=checkbox]:checked').forEach(cb=>huntingGrounds.push(cb.value));
     if(!huntingGrounds.length){toast('사냥터를 하나 이상 선택해주세요.','warn');return;}
     details.push(`역할:${document.getElementById('subRole').value}`);
+    if(document.getElementById('hasPartyMilgyeok').checked){
+      const partyNick=document.getElementById('partyNickMilgyeok').value.trim();
+      if(!partyNick){toast('일행 닉네임을 입력해주세요.','warn');return;}
+      hasParty=true;
+      partyMember={nick:partyNick,job:document.getElementById('partyJobMilgyeok').value,stat:document.getElementById('partyStatMilgyeok').value||'0'};
+    }
   }else if(category==='흉가노노'){
     hyunggaRole=document.querySelector('input[name=hyunggaRole]:checked').value;
     details.push(`역할:${hyunggaRole}`);
@@ -566,9 +608,22 @@ function registerUser(){
     }
   }
   if(category==='레이드' && raidType==='떼팟'){
-    const member={nick,job,hp,mp,playTime,ts:Date.now()};
-    squadRef.child(raidBoss).child('members').push(member)
-      .then(()=>toast(`<b>${nick}</b> 님, ${raidBoss} 떼팟에 합류했습니다.`,'info'))
+    const ts=Date.now();
+    const pushList=[{nick,job,hp,mp,playTime,ts}];
+    if(document.getElementById('hasPartyDdaepat').checked){
+      document.querySelectorAll('#ddaepatCompanionList .companion-row').forEach(row=>{
+        const pJob=row.querySelector('select').value;
+        const pNick=row.querySelector('input[type=text]').value.trim();
+        const pStat=row.querySelector('input[type=number]').value||'0';
+        if(pNick){
+          const isSl=pJob==='전사'||pJob==='도적';
+          pushList.push({nick:pNick,job:pJob,hp:isSl?pStat:'0',mp:!isSl?pStat:'0',playTime,ts,_fromParty:true});
+        }
+      });
+    }
+    const pushAll=pushList.map(m=>squadRef.child(raidBoss).child('members').push(m));
+    Promise.all(pushAll)
+      .then(()=>toast(`<b>${nick}</b> 님${pushList.length>1?` 외 ${pushList.length-1}명`:''} ${raidBoss} 떼팟에 합류했습니다.`,'info'))
       .catch(()=>toast('합류 실패','warn'));
     return;
   }
@@ -773,11 +828,27 @@ function findParty(list){
       }
     }
   }
+  // 반반밀대/밀격쩔 일행있음: 리더(2인)+솔로 = 3인 매칭
+  {
+    const cats2=['반반밀대','밀격쩔'];
+    for(const cat of cats2){
+      const leaders=list.filter(u=>u.category===cat&&u.hasParty);
+      const solos=list.filter(u=>u.category===cat&&!u.hasParty);
+      for(const leader of leaders){
+        for(const third of solos){
+          if(checkSpecsAndBlacklist(leader,third)){
+            const cg=(leader.huntingGrounds||[]).filter(g=>(third.huntingGrounds||[]).includes(g));
+            if(cg.length) return{displayCategory:cat,members:[leader,makeCompanionEntry(leader),third],commonGrounds:cg};
+          }
+        }
+      }
+    }
+  }
   {
     const cats=['격도술','반반밀대','밀격쩔'];
     for(const cat of cats){
-      // 격도술은 일행없음 솔로만 3인 매칭
-      const same=list.filter(u=>u.category===cat&&(cat!=='격도술'||!u.hasParty));
+      // 일행있음 리더는 위에서 처리했으므로 제외
+      const same=list.filter(u=>u.category===cat&&!u.hasParty);
       if(same.length>=3){
         for(let i=0;i<same.length;i++)
           for(let j=i+1;j<same.length;j++)
@@ -865,10 +936,17 @@ function updateQueueDisplay(){
     const c=JOB_COLORS[u.job]||'var(--gold)';
     const d=document.createElement('div');
     d.className='qitem';d.style.setProperty('--accent',c);
+    const companionHtml = u.hasParty && u.partyMember ? (()=>{
+      const m=u.partyMember;
+      const isSl=m.job==='전사'||m.job==='도적';
+      const statLabel=isSl?'체력':'마력';
+      return `<div style="margin-top:4px;font-size:12.5px;color:var(--paper-dim);">👥 일행: ${jobBadge(m.job)} <b>${m.nick}</b>${m.stat&&m.stat!=='0'?` · ${statLabel} ${m.stat}만`:''}</div>`;
+    })() : '';
     d.innerHTML=`
       <div style="flex:1;min-width:0;">
         <div><span class="nm">${u.nick}</span>${jobBadge(u.job)}</div>
         <div class="stat">체력 ${u.hp}만 · 마력 ${u.mp}만 <span style="color:var(--gold-soft);">(${u.playTime||'30분'})</span></div>
+        ${companionHtml}
         <div class="mode">➔ ${u.category} <span style="color:var(--paper-dim);">[${sub}]</span></div>
       </div>
       <button class="x-btn" onclick="cancelQueue('${u._id}')" title="대기 취소">×</button>`;

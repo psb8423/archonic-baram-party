@@ -193,6 +193,28 @@
                 <option value="쩔">쩔</option>
               </select>
             </div>
+            <div style="margin-top:14px;border-top:1px dashed var(--line-soft);padding-top:12px;">
+              <label class="chip" style="display:inline-flex;gap:8px;max-width:fit-content;padding:10px 14px;">
+                <input type="checkbox" id="hasPartyMilgyeok" onchange="toggleCompanionPanel('Milgyeok')">
+                <span>👥 일행 있음 (2인 입장)</span>
+              </label>
+              <div id="companionMilgyeok" style="display:none;margin-top:12px;">
+                <div style="display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:12px;">
+                  <div class="field" style="margin-bottom:0;">
+                    <label class="lbl">일행 직업</label>
+                    <select id="partyJobMilgyeok"><option value="도사">도사</option><option value="주술사">주술사</option><option value="전사">전사</option><option value="도적">도적</option></select>
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label class="lbl">일행 닉네임</label>
+                    <input type="text" id="partyNickMilgyeok" placeholder="닉네임 입력">
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label class="lbl">일행 체/마(만)</label>
+                    <input type="number" id="partyStatMilgyeok" placeholder="0">
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div id="panelHyungga" class="dyn">
@@ -252,6 +274,16 @@
                     <input type="number" id="partyStatRaid" placeholder="0">
                   </div>
                 </div>
+              </div>
+            </div>
+            <div id="raidDdaepatCompanionWrap" style="display:none;margin-top:12px;border-top:1px dashed rgba(220,91,64,.3);padding-top:12px;">
+              <label class="chip fire" style="display:inline-flex;gap:8px;max-width:fit-content;padding:10px 14px;">
+                <input type="checkbox" id="hasPartyDdaepat" onchange="toggleDdaepatCompanion()">
+                <span>👥 일행 있음 (여러 명 함께 입장)</span>
+              </label>
+              <div id="companionDdaepat" style="display:none;margin-top:12px;">
+                <div id="ddaepatCompanionList"></div>
+                <button type="button" onclick="addDdaepatCompanion()" style="margin-top:6px;background:rgba(220,91,64,.15);border:1px dashed rgba(220,91,64,.5);color:var(--cinnabar);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;">+ 일행 추가</button>
               </div>
             </div>
           </div>
