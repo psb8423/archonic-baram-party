@@ -427,3 +427,17 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
 }
 .footnote a{color:var(--gold);text-decoration:none;font-weight:700;}
 .footnote a:hover{color:#fff;text-decoration:underline;}
+
+/* 모바일 줄바꿈 헬퍼 */
+.mobile-br{display:none;}
+@media(max-width:600px){
+  .mobile-br{display:block;}
+  .panel-h{white-space:normal;}
+  .lbl.wrap-ok{height:auto;white-space:normal;}
+}
+
+/* 관리자 패널 신고 점수 항목 */
+.admin-score{font-weight:900;margin-left:8px;}
+.admin-score.banned{color:var(--cinnabar);}
+.admin-score.warned{color:var(--gold);}
+.admin-btn-row{display:flex;gap:6px;flex-shrink:0;}

@@ -35,6 +35,14 @@ if(FB_OK){
   squadRef=db.ref('squads');
 }
 
+// 12시간마다 0.1점씩 자동 차감되는 페널티 점수 계산 (lazy decay)
+function calcDecayedScore(data) {
+  if(!data || !data.score) return 0;
+  const hoursPassed = (Date.now() - (data.last_updated || Date.now())) / 3600000;
+  const decay = Math.floor(hoursPassed / 12) * 0.1;
+  return Math.max(0, (data.score || 0) - decay);
+}
+
 async function sha256(message) {
   const msgBuffer = new TextEncoder().encode(message);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -67,13 +75,20 @@ function checkIpAndDeviceBan(){
     .then(data => {
       userIp = data.ip;
       if(!FB_OK) return;
-      db.ref('blacklist_ips').once('value', snap => {
-        const blacklist = snap.val() || {};
-        const safeIpKey = userIp.replace(/\./g, '_');
-        if(blacklist[safeIpKey]){
+      const safeIpKey = data.ip.replace(/\./g, '_');
+      db.ref('blacklist_ips').child(safeIpKey).once('value', snap => {
+        if(snap.val()){
           localStorage.setItem('baram_banned_device', 'true');
           applyBanUi();
+          return;
         }
+        // 누적 페널티 점수도 확인
+        db.ref('users_penalty').child(safeIpKey).once('value', penSnap => {
+          if(calcDecayedScore(penSnap.val()) >= 1.0){
+            localStorage.setItem('baram_banned_device', 'true');
+            applyBanUi();
+          }
+        });
       });
     })
     .catch(err => console.log("IP 가져오기 오류 (무시하고 진행):", err));
@@ -91,58 +106,94 @@ function applyBanUi(){
 
 function reportFakeMatch(matchKey) {
   if(!FB_OK) return;
-  const realScammerNick = prompt("⚠️ 허위 매칭 신고 안내\n\n매칭 리스트에 적힌 사칭 닉네임 대신, 실제 디스코드나 인게임에서 접촉해 온 '진짜 빌런 닉네임'을 입력해 주세요.\n해당 유저의 등록 IP와 현재 브라우저가 즉각 차단 조치됩니다.");
-  if(!realScammerNick || !realScammerNick.trim()) {
-    toast("신고가 취소되었습니다.", "info");
-    return;
-  }
-  const targetNick = realScammerNick.trim();
+  const rawNick = prompt("⚠️ 신고 안내\n\n신고할 대상의 닉네임을 입력하세요.");
+  if(!rawNick || !rawNick.trim()) { toast("신고가 취소되었습니다.", "info"); return; }
+  const targetNick = rawNick.trim();
+
+  const reasonInput = prompt(`[${targetNick}] 신고 사유를 선택하세요:\n1 = 사칭\n2 = 비매너\n3 = 허위 매칭\n(또는 직접 입력)`);
+  if(!reasonInput) { toast("신고가 취소되었습니다.", "info"); return; }
+  const reason = {'1':'사칭','2':'비매너','3':'허위 매칭'}[reasonInput.trim()] || reasonInput.trim();
+
   db.ref('queue_ips').child(targetNick).once('value', snap => {
-    let ScammerIp = snap.val();
-    if(!ScammerIp) {
-      const foundInQueue = waitingQueue.find(u => u.nick === targetNick);
-      if(foundInQueue && foundInQueue._ip) ScammerIp = foundInQueue._ip;
+    let targetIp = snap.val();
+    if(!targetIp) {
+      const found = waitingQueue.find(u => u.nick === targetNick);
+      if(found && found._ip) targetIp = found._ip;
     }
-    if(ScammerIp) {
-      const safeIpKey = ScammerIp.replace(/\./g, '_');
-      db.ref('blacklist_ips').child(safeIpKey).set({
-        ip: ScammerIp, estimatedNick: targetNick, ts: Date.now()
-      }).then(() => {
-        toast(`허위 등록 유저 [<b>${targetNick}</b>]의 IP가 즉시 영구 차단되었습니다.`, 'warn');
+
+    // 신고 로그 기록
+    db.ref('reports').push({ targetNick, targetIp: targetIp||'unknown', reporterIp: userIp||'unknown', reason, matchKey, ts: Date.now() });
+
+    if(targetIp) {
+      const safeKey = targetIp.replace(/\./g, '_');
+      db.ref('users_penalty').child(safeKey).transaction(current => {
+        const now = Date.now();
+        if(!current) return { score: 1.0, last_updated: now, status: 'banned', estimatedNick: targetNick, ip: targetIp };
+        const newScore = calcDecayedScore(current) + 1.0;
+        return { ...current, score: newScore, last_updated: now, status: newScore >= 1.0 ? 'banned' : 'active', estimatedNick: targetNick };
+      }).then(result => {
+        if(!result.committed) return;
+        const finalScore = calcDecayedScore(result.snapshot.val());
+        if(finalScore >= 1.0) {
+          db.ref('blacklist_ips').child(safeKey).set({ ip: targetIp, estimatedNick: targetNick, ts: Date.now(), source: 'penalty' });
+          toast(`[<b>${targetNick}</b>] 누적 신고로 즉시 차단 처리되었습니다.`, 'warn');
+        } else {
+          toast(`[<b>${targetNick}</b>] 신고 접수 완료. 누적 시 자동 차단됩니다.`, 'warn');
+        }
       });
     } else {
       db.ref('blacklist_nicks').child(targetNick).set(true);
-      toast(`[<b>${targetNick}</b>] 님이 허위 사칭 유저로 신고 및 등록 차단 처리되었습니다.`, 'warn');
+      toast(`[<b>${targetNick}</b>] 신고 접수 완료.`, 'warn');
     }
   });
 }
 
 function listenAdminBlacklist() {
   if(!FB_OK || !isAdminAuthenticated) return;
-  db.ref('blacklist_ips').on('value', snap => {
-    const listContainer = document.getElementById('adminBanList');
-    const data = snap.val();
-    if(!data) {
-      listContainer.innerHTML = '<div class="empty" style="padding:14px 0;">현재 시스템에 차단된 IP가 존재하지 않습니다.</div>';
+  const listContainer = document.getElementById('adminBanList');
+
+  db.ref('users_penalty').on('value', snap => {
+    const data = snap.val() || {};
+    const entries = Object.keys(data)
+      .map(key => ({ key, ...data[key], currentScore: calcDecayedScore(data[key]) }))
+      .filter(e => e.currentScore > 0)
+      .sort((a, b) => b.currentScore - a.currentScore);
+
+    if(!entries.length) {
+      listContainer.innerHTML = '<div class="empty" style="padding:14px 0;">신고된 유저가 없습니다.</div>';
       return;
     }
-    let htmlStr = '';
-    Object.keys(data).forEach(key => {
-      const node = data[key];
-      const actualIp = node.ip ? node.ip : key.replace(/_/g, '.');
-      const nick = node.estimatedNick ? node.estimatedNick : "추적 불가 유저";
-      htmlStr += `
+
+    listContainer.innerHTML = entries.map(e => {
+      const isBanned = e.currentScore >= 1.0;
+      const ip = e.ip || e.key.replace(/_/g, '.');
+      const nick = e.estimatedNick || '추적 불가';
+      const scoreLabel = `<span class="admin-score ${isBanned?'banned':'warned'}">점수 ${e.currentScore.toFixed(1)} ${isBanned?'[차단중]':'[경고]'}</span>`;
+      return `
         <div class="admin-ban-item">
           <div class="admin-ban-info">
-            <b>${actualIp}</b>
-            <span>(추정 ID: <b style="color:var(--gold); font-size:14px;">${nick}</b>)</span>
+            <b>${ip}</b>
+            <span>(추정 ID: <b style="color:var(--gold);font-size:14px;">${nick}</b>)</span>
+            ${scoreLabel}
           </div>
-          <button class="admin-unban-btn" onclick="removeIpBanFromServer('${key}', '${nick}')">❌ 차단 해제</button>
+          <div class="admin-btn-row">
+            <button class="admin-unban-btn" onclick="adminResetPenalty('${e.key}','${nick}')">점수 초기화</button>
+            ${isBanned ? `<button class="admin-unban-btn" onclick="removeIpBanFromServer('${e.key}','${nick}')">차단 해제</button>` : ''}
+          </div>
         </div>
       `;
-    });
-    listContainer.innerHTML = htmlStr;
+    }).join('');
   });
+}
+
+function adminResetPenalty(safeKey, nick) {
+  if(!FB_OK || !isAdminAuthenticated) return;
+  if(!confirm(`[${nick}]의 신고 점수를 초기화하시겠습니까?`)) return;
+  db.ref('users_penalty').child(safeKey).update({ score: 0, status: 'active', last_updated: Date.now() })
+    .then(() => {
+      db.ref('blacklist_ips').child(safeKey).remove();
+      toast(`[${nick}] 신고 점수가 초기화되었습니다.`, 'info');
+    });
 }
 
 function removeIpBanFromServer(safeIpKey, associatedNick) {
