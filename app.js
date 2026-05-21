@@ -394,6 +394,38 @@ function initBindings(){
   document.getElementById('userMp').addEventListener('keydown', (e) => { if(e.key === 'Enter') registerUser(); });
 }
 
+function toggleCompanionPanel(type) {
+  const el = document.getElementById('companion' + type);
+  const checked = document.getElementById('hasParty' + type).checked;
+  if(el) el.style.display = checked ? 'block' : 'none';
+}
+
+function toggleRaidTypeCompanion() {
+  const rt = document.getElementById('raidType').value;
+  const wrap = document.getElementById('raidCompanionWrap');
+  if(!wrap) return;
+  wrap.style.display = rt === '격도술' ? 'block' : 'none';
+  if(rt !== '격도술') {
+    const cb = document.getElementById('hasPartyRaid');
+    if(cb) cb.checked = false;
+    const panel = document.getElementById('companionRaid');
+    if(panel) panel.style.display = 'none';
+  }
+}
+
+function makeCompanionEntry(leader) {
+  const m = leader.partyMember;
+  const isSlayer = m.job === '전사' || m.job === '도적';
+  return {
+    nick: m.nick, job: m.job,
+    hp: isSlayer ? (m.stat || '0') : '0',
+    mp: !isSlayer ? (m.stat || '0') : '0',
+    expBuff: leader.expBuff,
+    playTime: leader.playTime,
+    _fromParty: true
+  };
+}
+
 function syncJobColor(){
   const job=document.getElementById('userJob').value;
   document.getElementById('jobWrap').style.setProperty('--swatch',JOB_COLORS[job]||'var(--gold)');
@@ -490,12 +522,19 @@ function registerUser(){
   const reqFilterDoMp = document.getElementById('filterDosaMp').value || '0';
   const myBlacklist = getMyBlacklistArray();
   let huntingGrounds=[],expBuff='X',mildae='X',details=[],raidBoss='',raidType='',hyunggaRole='';
+  let hasParty=false, partyMember=null;
   if(category==='격도술'){
     document.querySelectorAll('#panelGyukdo input[type=checkbox]:checked').forEach(cb=>huntingGrounds.push(cb.value));
     if(!huntingGrounds.length){toast('사냥터를 하나 이상 선택해주세요.','warn');return;}
     expBuff=document.querySelector('input[name=expBuffA]:checked').value;
     mildae=document.querySelector('input[name=mildaeA]:checked').value;
     details.push(`경쿠:${expBuff}`,`밀대:${mildae}`);
+    if(document.getElementById('hasPartyGyukdo').checked){
+      const partyNick=document.getElementById('partyNickGyukdo').value.trim();
+      if(!partyNick){toast('일행 닉네임을 입력해주세요.','warn');return;}
+      hasParty=true;
+      partyMember={nick:partyNick,job:document.getElementById('partyJobGyukdo').value,stat:document.getElementById('partyStatGyukdo').value||'0'};
+    }
   }else if(category==='격도1대1'){
     document.querySelectorAll('#panelGyukdo1on1 input[type=checkbox]:checked').forEach(cb=>huntingGrounds.push(cb.value));
     if(!huntingGrounds.length){toast('사냥터를 하나 이상 선택해주세요.','warn');return;}
@@ -519,6 +558,12 @@ function registerUser(){
     raidBoss=document.querySelector('input[name=raidBoss]:checked').value;
     raidType=document.getElementById('raidType').value;
     details.push(`보스:${raidBoss}`,`방식:${raidType}`);
+    if(raidType==='격도술' && document.getElementById('hasPartyRaid').checked){
+      const partyNick=document.getElementById('partyNickRaid').value.trim();
+      if(!partyNick){toast('일행 닉네임을 입력해주세요.','warn');return;}
+      hasParty=true;
+      partyMember={nick:partyNick,job:document.getElementById('partyJobRaid').value,stat:document.getElementById('partyStatRaid').value||'0'};
+    }
   }
   if(category==='레이드' && raidType==='떼팟'){
     const member={nick,job,hp,mp,playTime,ts:Date.now()};
@@ -528,7 +573,8 @@ function registerUser(){
     return;
   }
   const entry={
-    nick,job,hp,mp,category,huntingGrounds,expBuff,mildae,raidBoss,raidType,hyunggaRole,playTime,
+    nick,job,hp,mp,category,huntingGrounds,expBuff,mildae,raidBoss,raidType,hyunggaRole,playTime,hasParty,
+    ...(partyMember && {partyMember}),
     filterHp: reqFilterHp, filterJuMp: reqFilterJuMp, filterDoMp: reqFilterDoMp,
     blacklist: myBlacklist,
     _ip: userIp,
@@ -572,7 +618,7 @@ function tryAutoMatch(){
     const n=new Date();
     const rec={
       category:p.displayCategory,
-      members:p.members.map(({_id,ts,...rest})=>rest),
+      members:p.members.map(({_id,ts,_fromParty,...rest})=>rest),
       matchTime:`${n.getHours()}:${String(n.getMinutes()).padStart(2,'0')}`,
       commonGrounds:p.commonGrounds||[],
       ts:Date.now()
@@ -633,6 +679,51 @@ function checkSpecsAndBlacklist(u1, u2, u3=null) {
 }
 
 function findParty(list){
+  // 격도술 일행있음: 리더(2인)+솔로 = 3인 매칭
+  {
+    const pool=list.filter(u=>u.category==='격도술');
+    const leaders=pool.filter(u=>u.hasParty);
+    const solos=pool.filter(u=>!u.hasParty);
+    for(const leader of leaders){
+      for(const third of solos){
+        if(checkSpecsAndBlacklist(leader,third)){
+          const cg=(leader.huntingGrounds||[]).filter(g=>(third.huntingGrounds||[]).includes(g));
+          if(cg.length){
+            return{displayCategory:'격도술',members:[leader,makeCompanionEntry(leader),third],commonGrounds:cg};
+          }
+        }
+      }
+    }
+  }
+  // 레이드 격도술 일행있음
+  {
+    const pool=list.filter(u=>u.category==='레이드'&&u.raidType==='격도술'&&u.hasParty);
+    const solos=list.filter(u=>u.category==='레이드'&&u.raidType==='격도술'&&!u.hasParty);
+    for(const leader of pool){
+      for(const third of solos){
+        if(third.raidBoss!==leader.raidBoss) continue;
+        if(checkSpecsAndBlacklist(leader,third)){
+          return{displayCategory:`레이드-${leader.raidBoss}(격도술)`,members:[leader,makeCompanionEntry(leader),third],commonGrounds:[]};
+        }
+      }
+    }
+  }
+  // 차균: 주술사 즉시 솔로 매칭
+  {
+    const pool=list.filter(u=>u.category==='차균');
+    const sulsa=pool.find(u=>u.job==='주술사');
+    if(sulsa) return{displayCategory:'차균',members:[sulsa],commonGrounds:[]};
+  }
+  // 차균: 격수(전사/도적)+도사 2인 매칭만 허용
+  {
+    const pool=list.filter(u=>u.category==='차균');
+    const gyeok=pool.find(u=>u.job==='전사'||u.job==='도적');
+    const dosa=pool.find(u=>u.job==='도사');
+    if(gyeok&&dosa&&checkSpecsAndBlacklist(gyeok,dosa)){
+      const cg=(gyeok.huntingGrounds||[]).filter(g=>(dosa.huntingGrounds||[]).includes(g));
+      if(cg.length) return{displayCategory:'차균',members:[gyeok,dosa],commonGrounds:cg};
+    }
+  }
   {
     const pool=list.filter(u=>u.category==='격도1대1');
     const a=pool.find(u=>u.job!=='도사'), d=pool.find(u=>u.job==='도사'&&u!==a);
@@ -683,9 +774,10 @@ function findParty(list){
     }
   }
   {
-    const cats=['격도술','반반밀대','밀격쩔','차균'];
+    const cats=['격도술','반반밀대','밀격쩔'];
     for(const cat of cats){
-      const same=list.filter(u=>u.category===cat);
+      // 격도술은 일행없음 솔로만 3인 매칭
+      const same=list.filter(u=>u.category===cat&&(cat!=='격도술'||!u.hasParty));
       if(same.length>=3){
         for(let i=0;i<same.length;i++)
           for(let j=i+1;j<same.length;j++)

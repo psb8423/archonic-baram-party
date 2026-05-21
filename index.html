@@ -108,6 +108,28 @@
                 </div>
               </div>
             </div>
+            <div style="margin-top:14px;border-top:1px dashed var(--line-soft);padding-top:12px;">
+              <label class="chip" style="display:inline-flex;gap:8px;max-width:fit-content;padding:10px 14px;">
+                <input type="checkbox" id="hasPartyGyukdo" onchange="toggleCompanionPanel('Gyukdo')">
+                <span>👥 일행 있음 (2인 입장)</span>
+              </label>
+              <div id="companionGyukdo" style="display:none;margin-top:12px;">
+                <div style="display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:12px;">
+                  <div class="field" style="margin-bottom:0;">
+                    <label class="lbl">일행 직업</label>
+                    <select id="partyJobGyukdo"><option value="도사">도사</option><option value="주술사">주술사</option><option value="전사">전사</option><option value="도적">도적</option></select>
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label class="lbl">일행 닉네임</label>
+                    <input type="text" id="partyNickGyukdo" placeholder="닉네임 입력">
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label class="lbl">일행 체/마(만)</label>
+                    <input type="number" id="partyStatGyukdo" placeholder="0">
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div id="panelGyukdo1on1" class="dyn">
@@ -204,11 +226,33 @@
             </div>
             <div class="field" style="margin-top:16px;margin-bottom:0;">
               <label class="lbl">파티 구성 방식</label>
-              <select id="raidType">
+              <select id="raidType" onchange="toggleRaidTypeCompanion()">
                 <option value="격도술">격도술 (소수 정예 · 3인)</option>
                 <option value="격도1대1">격도 1대1 (2인 클리어)</option>
                 <option value="떼팟">떼팟 (도사 ≥ 격수 · 10인)</option>
               </select>
+            </div>
+            <div id="raidCompanionWrap" style="display:none;margin-top:12px;border-top:1px dashed rgba(220,91,64,.3);padding-top:12px;">
+              <label class="chip fire" style="display:inline-flex;gap:8px;max-width:fit-content;padding:10px 14px;">
+                <input type="checkbox" id="hasPartyRaid" onchange="toggleCompanionPanel('Raid')">
+                <span>👥 일행 있음 (2인 입장)</span>
+              </label>
+              <div id="companionRaid" style="display:none;margin-top:12px;">
+                <div style="display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:12px;">
+                  <div class="field" style="margin-bottom:0;">
+                    <label class="lbl">일행 직업</label>
+                    <select id="partyJobRaid"><option value="도사">도사</option><option value="주술사">주술사</option><option value="전사">전사</option><option value="도적">도적</option></select>
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label class="lbl">일행 닉네임</label>
+                    <input type="text" id="partyNickRaid" placeholder="닉네임 입력">
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label class="lbl">일행 체/마(만)</label>
+                    <input type="number" id="partyStatRaid" placeholder="0">
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
