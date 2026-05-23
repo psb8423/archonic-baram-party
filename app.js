@@ -12,10 +12,11 @@ const firebaseConfig={
 
 const FB_OK=(typeof firebase!=='undefined');
 const pageLoadTime = Date.now();
-let db=null,queueRef=null,matchRef=null,squadRef=null;
+let db=null,queueRef=null,matchRef=null,squadRef=null,pendingMatchRef=null;
 const MATCH_KEEP=30;
 const DDAEPAT_MIN=7;
 const GYEOK_CAP=5;
+const QUEUE_EXPIRE_MS = 30 * 60 * 1000; // 30분
 
 let waitingQueue=[];
 let matchedParties=[];
@@ -27,15 +28,18 @@ let isAdminAuthenticated = false;
 let audioCtx = null;
 let audioBuffer = null;
 
+let activePendingId = null;
+let pendingTimerInterval = null;
+
 if(FB_OK){
   firebase.initializeApp(firebaseConfig);
   db=firebase.database();
   queueRef=db.ref('queue');
   matchRef=db.ref('matched');
   squadRef=db.ref('squads');
+  pendingMatchRef=db.ref('pending_matches');
 }
 
-// 12시간마다 0.1점씩 자동 차감되는 페널티 점수 계산 (lazy decay)
 function calcDecayedScore(data) {
   if(!data || !data.score) return 0;
   const hoursPassed = (Date.now() - (data.last_updated || Date.now())) / 3600000;
@@ -82,7 +86,6 @@ function checkIpAndDeviceBan(){
           applyBanUi();
           return;
         }
-        // 누적 페널티 점수도 확인
         db.ref('users_penalty').child(safeIpKey).once('value', penSnap => {
           if(calcDecayedScore(penSnap.val()) >= 1.0){
             localStorage.setItem('baram_banned_device', 'true');
@@ -121,7 +124,6 @@ function reportFakeMatch(matchKey) {
       if(found && found._ip) targetIp = found._ip;
     }
 
-    // 신고 로그 기록
     db.ref('reports').push({ targetNick, targetIp: targetIp||'unknown', reporterIp: userIp||'unknown', reason, matchKey, ts: Date.now() });
 
     if(targetIp) {
@@ -326,6 +328,191 @@ function initConn(){
   window.addEventListener('keydown', unlockAudioContext);
 }
 
+// ── 대기열 만료 처리 ──
+function cleanExpiredQueue() {
+  if(!FB_OK) return;
+  const now = Date.now();
+  queueRef.once('value', snap => {
+    const v = snap.val();
+    if(!v) return;
+    Object.keys(v).forEach(k => {
+      if(v[k].ts && now - v[k].ts >= QUEUE_EXPIRE_MS) queueRef.child(k).remove();
+    });
+  });
+}
+
+// ── 대기열 갱신 (30분 연장) ──
+function refreshQueue(id) {
+  if(!FB_OK) return;
+  const u = waitingQueue.find(x => x._id === id);
+  if(!u) return;
+  if(userIp && u._ip !== userIp) { toast('본인의 대기열만 갱신할 수 있습니다.', 'warn'); return; }
+  queueRef.child(id).update({ ts: firebase.database.ServerValue.TIMESTAMP })
+    .then(() => toast(`<b>${u.nick}</b> 님의 대기열이 갱신되었습니다. (30분 연장)`, 'info'))
+    .catch(() => toast('갱신 실패', 'warn'));
+}
+
+// ── 만료된 pending match 정리 ──
+function cleanExpiredPending() {
+  if(!FB_OK) return;
+  const now = Date.now();
+  pendingMatchRef.once('value', snap => {
+    const v = snap.val();
+    if(!v) return;
+    Object.keys(v).forEach(k => {
+      const p = v[k];
+      if(p.status === 'pending' && p.pendingTs && now - p.pendingTs >= 60000) {
+        pendingMatchRef.child(k).transaction(cur => {
+          if(!cur || cur.status !== 'pending') return;
+          return { ...cur, status: 'timeout' };
+        }).then(res => { if(res.committed) pendingMatchRef.child(k).remove(); });
+      }
+    });
+  });
+}
+
+// ── Pending 매칭 모달 ──
+function openPendingModal(pendingId, pending) {
+  activePendingId = pendingId;
+  document.getElementById('pendingModalCat').textContent = `[${pending.category}] 파티 매칭이 성사되었습니다!`;
+
+  const listEl = document.getElementById('pendingModalList');
+  listEl.innerHTML = (pending.members || []).map(m => {
+    const isSl = m.job === '전사' || m.job === '도적';
+    const spec = isSl ? `체력 ${m.hp}만` : `마력 ${m.mp}만`;
+    const c = JOB_COLORS[m.job] || 'var(--gold)';
+    const badge = `<span class="jb" style="background:${c}22;color:${c};margin:0 0 0 5px;font-size:11px;padding:1px 6px;">${m.job}</span>`;
+    const expTag = m.expBuff === 'O'
+      ? `<span style="color:var(--jade);font-size:11.5px;font-weight:900;margin-left:5px;">⚡경쿠</span>`
+      : '';
+    return `<div class="modal-member-row">
+      <div class="modal-m-info" style="flex-wrap:wrap;gap:2px;"><span style="font-weight:700;">${m.nick}</span>${badge}${expTag}</div>
+      <div class="modal-m-spec">${spec}</div>
+    </div>`;
+  }).join('');
+
+  if(pending.commonGrounds && pending.commonGrounds.length) {
+    document.getElementById('pendingModalDest').innerHTML = `📍 공통 사냥터: <b style="color:var(--jade);">${pending.commonGrounds.join(', ')}</b>`;
+  } else {
+    document.getElementById('pendingModalDest').innerHTML = '';
+  }
+
+  if(pendingTimerInterval) clearInterval(pendingTimerInterval);
+  let secs = 60;
+  const timerEl = document.getElementById('pendingTimer');
+  const tick = () => {
+    timerEl.textContent = `${secs}초`;
+    if(secs <= 0) { clearInterval(pendingTimerInterval); declinePending(pendingId); }
+    secs--;
+  };
+  tick();
+  pendingTimerInterval = setInterval(tick, 1000);
+
+  document.getElementById('pendingModal').classList.add('open');
+  playMatchSound();
+}
+
+function closePendingModal() {
+  if(pendingTimerInterval) { clearInterval(pendingTimerInterval); pendingTimerInterval = null; }
+  activePendingId = null;
+  document.getElementById('pendingModal').classList.remove('open');
+}
+
+function acceptPending() {
+  if(!FB_OK || !activePendingId) return;
+  const myNick = document.getElementById('userNick').value.trim();
+  if(!myNick) return;
+  const safeNick = myNick.replace(/[.#$[\]/]/g, '_');
+  const pid = activePendingId;
+  pendingMatchRef.child(pid).child('acceptances').child(safeNick).set('accepted')
+    .then(() => toast('수락 완료. 다른 멤버의 응답을 기다리는 중...', 'info'));
+}
+
+function declinePending(overridePid) {
+  if(!FB_OK) return;
+  const pid = overridePid || activePendingId;
+  if(!pid) return;
+  pendingMatchRef.child(pid).transaction(cur => {
+    if(!cur || cur.status !== 'pending') return;
+    return { ...cur, status: 'declined' };
+  }).then(res => {
+    if(res.committed) {
+      pendingMatchRef.child(pid).remove();
+      if(activePendingId === pid) {
+        closePendingModal();
+        toast('파티를 이미 구했거나 매칭을 거절하였습니다.', 'info');
+      }
+    }
+  });
+}
+
+function handlePendingChange(pendingId, pending) {
+  if(!pending) return;
+  const myNick = document.getElementById('userNick').value.trim();
+
+  if(pending.status === 'declined' || pending.status === 'timeout') {
+    if(activePendingId === pendingId) {
+      closePendingModal();
+      toast('파티원이 거절하거나 시간이 초과되어 매칭이 취소되었습니다.', 'warn');
+    }
+    return;
+  }
+  if(pending.status === 'completed') {
+    if(activePendingId === pendingId) closePendingModal();
+    return;
+  }
+  if(pending.status !== 'pending') return;
+
+  const members = pending.members || [];
+  if(!myNick || !members.some(m => m.nick === myNick)) return;
+
+  const acceptances = pending.acceptances || {};
+  const hasDeclined = Object.values(acceptances).some(v => v === 'declined');
+  const allAccepted = members.length > 0 && members.every(m => {
+    const sn = m.nick.replace(/[.#$[\]/]/g, '_');
+    return acceptances[sn] === 'accepted';
+  });
+
+  if(hasDeclined) {
+    if(activePendingId === pendingId) { closePendingModal(); toast('파티원이 거절하여 매칭이 취소되었습니다.', 'warn'); }
+    pendingMatchRef.child(pendingId).transaction(cur => {
+      if(!cur || cur.status !== 'pending') return;
+      return { ...cur, status: 'declined' };
+    }).then(res => { if(res.committed) pendingMatchRef.child(pendingId).remove(); });
+    return;
+  }
+
+  if(allAccepted) {
+    pendingMatchRef.child(pendingId).transaction(cur => {
+      if(!cur || cur.status !== 'pending') return;
+      return { ...cur, status: 'completed' };
+    }).then(res => {
+      if(!res.committed) return;
+      if(activePendingId === pendingId) closePendingModal();
+      const n = new Date();
+      const rec = {
+        category: pending.category,
+        members: pending.members,
+        matchTime: `${n.getHours()}:${String(n.getMinutes()).padStart(2,'0')}`,
+        commonGrounds: pending.commonGrounds || [],
+        ts: Date.now()
+      };
+      matchRef.push(rec).then(() => {
+        pendingMatchRef.child(pendingId).remove();
+        matchRef.orderByChild('ts').once('value', s => {
+          const all = []; s.forEach(c => all.push({k:c.key, ts:c.val().ts||0}));
+          all.sort((a,b) => a.ts - b.ts);
+          for(let i = 0; i < all.length - MATCH_KEEP; i++) matchRef.child(all[i].k).remove();
+        });
+      });
+      playMatchSound();
+      openMatchModal({ displayCategory: pending.category, members: pending.members, commonGrounds: pending.commonGrounds || [] });
+      toast(`<b>[${pending.category}]</b> 파티 매칭 완료!`, 'win');
+      setTimeout(tryAutoMatch, 150);
+    });
+  }
+}
+
 function subscribe(){
   if(!FB_OK)return;
   queueRef.on('value',snap=>{
@@ -341,27 +528,30 @@ function subscribe(){
     matchedParties=arr;
     updateMatchedDisplay();
   });
-  // 새 매칭 발생 시 모든 멤버 브라우저에서 소리+팝업
-  matchRef.on('child_added', snap => {
-    const party = snap.val();
-    if(!party.ts || party.ts < pageLoadTime) return;
+  pendingMatchRef.on('child_added', snap => {
+    const pending = snap.val();
+    if(!pending || !pending.pendingTs || pending.pendingTs < pageLoadTime) return;
     const myNick = document.getElementById('userNick').value.trim();
     if(!myNick) return;
-    if(party.members && party.members.some(m => m.nick === myNick)) {
-      playMatchSound();
-      openMatchModal({
-        displayCategory: party.category,
-        members: party.members,
-        commonGrounds: party.commonGrounds || []
-      });
-      toast(`<b>[${party.category}]</b> 파티 매칭 완료!`, 'win');
+    if(pending.members && pending.members.some(m => m.nick === myNick)) {
+      openPendingModal(snap.key, pending);
     }
+  });
+  pendingMatchRef.on('child_changed', snap => {
+    handlePendingChange(snap.key, snap.val());
+  });
+  pendingMatchRef.on('child_removed', snap => {
+    if(activePendingId === snap.key) closePendingModal();
   });
   squadRef.on('value',snap=>{
     squads=snap.val()||{};
     updateMatchedDisplay();
     checkSquadComplete();
   });
+  // 주기적 만료 처리
+  setInterval(() => { cleanExpiredQueue(); cleanExpiredPending(); }, 60000);
+  cleanExpiredQueue();
+  cleanExpiredPending();
 }
 
 function toast(msg,type='info'){
@@ -566,12 +756,15 @@ function registerUser(){
   const myBlacklist = getMyBlacklistArray();
   let huntingGrounds=[],expBuff='X',mildae='X',details=[],raidBoss='',raidType='',hyunggaRole='';
   let hasParty=false, partyMember=null;
+  let alternativeCategories = [];
+
   if(category==='격도술'){
-    document.querySelectorAll('#panelGyukdo input[type=checkbox]:checked').forEach(cb=>huntingGrounds.push(cb.value));
+    document.querySelectorAll('#panelGyukdo input[type=checkbox]:not([name=altCatGyukdo]):checked').forEach(cb=>huntingGrounds.push(cb.value));
     if(!huntingGrounds.length){toast('사냥터를 하나 이상 선택해주세요.','warn');return;}
     expBuff=document.querySelector('input[name=expBuffA]:checked').value;
     mildae=document.querySelector('input[name=mildaeA]:checked').value;
     details.push(`경쿠:${expBuff}`,`밀대:${mildae}`);
+    document.querySelectorAll('input[name=altCatGyukdo]:checked').forEach(cb=>alternativeCategories.push(cb.value));
     if(document.getElementById('hasPartyGyukdo').checked){
       const partyNick=document.getElementById('partyNickGyukdo').value.trim();
       if(!partyNick){toast('일행 닉네임을 입력해주세요.','warn');return;}
@@ -579,11 +772,12 @@ function registerUser(){
       partyMember={nick:partyNick,job:document.getElementById('partyJobGyukdo').value,stat:document.getElementById('partyStatGyukdo').value||'0'};
     }
   }else if(category==='격도1대1'){
-    document.querySelectorAll('#panelGyukdo1on1 input[type=checkbox]:checked').forEach(cb=>huntingGrounds.push(cb.value));
+    document.querySelectorAll('#panelGyukdo1on1 input[type=checkbox]:not([name=altCat1on1]):checked').forEach(cb=>huntingGrounds.push(cb.value));
     if(!huntingGrounds.length){toast('사냥터를 하나 이상 선택해주세요.','warn');return;}
     expBuff=document.querySelector('input[name=expBuff1on1]:checked').value;
     mildae=document.querySelector('input[name=mildae1on1]:checked').value;
     details.push(`경쿠:${expBuff}`,`밀대:${mildae}`);
+    document.querySelectorAll('input[name=altCat1on1]:checked').forEach(cb=>alternativeCategories.push(cb.value));
   }else if(category==='떱헬'){
     document.querySelectorAll('#panelDdubHell input[type=checkbox]:checked').forEach(cb=>huntingGrounds.push(cb.value));
     if(!huntingGrounds.length){toast('사냥터를 하나 이상 선택해주세요.','warn');return;}
@@ -601,8 +795,9 @@ function registerUser(){
     hyunggaRole=document.querySelector('input[name=hyunggaRole]:checked').value;
     details.push(`역할:${hyunggaRole}`);
   }else if(category==='차균'){
-    document.querySelectorAll('#panelChagyoon input[type=checkbox]:checked').forEach(cb=>huntingGrounds.push(cb.value));
+    document.querySelectorAll('#panelChagyoon input[type=checkbox]:not([name=altCatChagyoon]):checked').forEach(cb=>huntingGrounds.push(cb.value));
     if(!huntingGrounds.length){toast('단수를 선택해주세요.','warn');return;}
+    document.querySelectorAll('input[name=altCatChagyoon]:checked').forEach(cb=>alternativeCategories.push(cb.value));
   }else if(category==='레이드'){
     raidBoss=document.querySelector('input[name=raidBoss]:checked').value;
     raidType=document.getElementById('raidType').value;
@@ -640,6 +835,7 @@ function registerUser(){
     filterHp: reqFilterHp, filterJuMp: reqFilterJuMp, filterDoMp: reqFilterDoMp,
     blacklist: myBlacklist,
     _ip: userIp,
+    alternativeCategories,
     detailsStr:details.length?details.join(', '):huntingGrounds.join(', '),
     ts:firebase.database.ServerValue.TIMESTAMP
   };
@@ -689,22 +885,23 @@ function tryAutoMatch(){
       Object.keys(q).forEach(key=>{if(matchedNicks.has(q[key].nick))queueRef.child(key).remove();});
     });
     const n=new Date();
-    const rec={
+    const members=p.members.map(({_id,ts,_fromParty,...rest})=>rest);
+    const pendingRec={
       category:p.displayCategory,
-      members:p.members.map(({_id,ts,_fromParty,...rest})=>rest),
+      members,
       matchTime:`${n.getHours()}:${String(n.getMinutes()).padStart(2,'0')}`,
       commonGrounds:p.commonGrounds||[],
-      ts:Date.now()
+      status:'pending',
+      acceptances:{},
+      pendingTs:Date.now()
     };
-    matchRef.push(rec).then(()=>{
-      matchRef.orderByChild('ts').once('value',s=>{
-        const all=[];s.forEach(c=>all.push({k:c.key,ts:c.val().ts||0}));
-        all.sort((a,b)=>all.ts-b.ts);
-        const over=all.length-MATCH_KEEP;
-        for(let i=0; i<over; i++)matchRef.child(all[i].k).remove();
-      });
+    members.forEach(m=>{
+      const sn=m.nick.replace(/[.#$[\]/]/g,'_');
+      pendingRec.acceptances[sn]='waiting';
     });
-    setTimeout(tryAutoMatch,150);
+    pendingMatchRef.push(pendingRec).then(()=>{
+      setTimeout(tryAutoMatch,150);
+    });
   });
 }
 
@@ -752,16 +949,22 @@ function checkSpecsAndBlacklist(u1, u2, u3=null) {
 }
 
 function findParty(list){
+  // 사용자가 허용하는 카테고리 목록 반환
+  function cats(u) { return [u.category, ...(u.alternativeCategories||[])]; }
+  function isNative(u, cat) { return u.category === cat; }
+  function isCrossChagyoon(u) { return u.category === '차균'; }
+
   // 격도술 일행있음: 리더(2인)+솔로 = 3인 매칭
   {
-    const pool=list.filter(u=>u.category==='격도술');
-    const leaders=pool.filter(u=>u.hasParty);
-    const solos=pool.filter(u=>!u.hasParty);
+    const leaders=list.filter(u=>u.category==='격도술'&&u.hasParty);
+    const soloPool=list.filter(u=>cats(u).includes('격도술')&&!(u.category==='격도술'&&u.hasParty));
     for(const leader of leaders){
-      for(const third of solos){
+      for(const third of soloPool){
+        if(leader._id===third._id) continue;
         if(checkSpecsAndBlacklist(leader,third)){
           const cg=(leader.huntingGrounds||[]).filter(g=>(third.huntingGrounds||[]).includes(g));
-          if(cg.length){
+          const crossCha = isCrossChagyoon(third);
+          if(cg.length || crossCha){
             return{displayCategory:'격도술',members:[leader,makeCompanionEntry(leader),third],commonGrounds:cg};
           }
         }
@@ -783,55 +986,80 @@ function findParty(list){
   }
   // 차균: 주술사 즉시 솔로 매칭
   {
-    const pool=list.filter(u=>u.category==='차균');
+    const pool=list.filter(u=>cats(u).includes('차균'));
     const sulsa=pool.find(u=>u.job==='주술사');
     if(sulsa) return{displayCategory:'차균',members:[sulsa],commonGrounds:[]};
   }
-  // 차균: 격수(전사/도적)+도사 2인 매칭만 허용
+  // 차균: 격수(전사/도적)+도사 2인 매칭 (교차 카테고리 포함)
   {
-    const pool=list.filter(u=>u.category==='차균');
-    const gyeok=pool.find(u=>u.job==='전사'||u.job==='도적');
-    const dosa=pool.find(u=>u.job==='도사');
-    if(gyeok&&dosa&&checkSpecsAndBlacklist(gyeok,dosa)){
-      const cg=(gyeok.huntingGrounds||[]).filter(g=>(dosa.huntingGrounds||[]).includes(g));
-      if(cg.length) return{displayCategory:'차균',members:[gyeok,dosa],commonGrounds:cg};
-    }
-  }
-  {
-    const pool=list.filter(u=>u.category==='격도1대1');
-    const a=pool.find(u=>u.job!=='도사'), d=pool.find(u=>u.job==='도사'&&u!==a);
-    if(a && d && checkSpecsAndBlacklist(a, d)) {
-      const cg=(a.huntingGrounds||[]).filter(g=>(d.huntingGrounds||[]).includes(g));
-      if(cg.length > 0) return {displayCategory:'격도(1대1)', members:[a,d], commonGrounds:cg};
-    }
-  }
-  {
-    const pool=list.filter(u=>u.category==='레이드' && u.raidType==='격도1대1');
-    for(const u1 of pool) {
-      if(u1.job === '도사') continue;
-      const u2 = pool.find(x => x.job==='도사' && x.raidBoss===u1.raidBoss && x._id!==u1._id && checkSpecsAndBlacklist(u1, x));
-      if(u2) return {displayCategory:`레이드-${u1.raidBoss}(1대1)`, members:[u1, u2], commonGrounds:[]};
-    }
-  }
-  {
-    const pool=list.filter(u=>u.category==='떱헬' && u.job==='주술사');
-    if(pool.length >= 2){
-      for(let i=0; i<pool.length; i++){
-        for(let j=i+1; j<pool.length; j++){
-          const u1=pool[i]; const u2=pool[j];
-          if(checkSpecsAndBlacklist(u1, u2)){
-            const cg=(u1.huntingGrounds||[]).filter(g=>(u2.huntingGrounds||[]).includes(g));
-            if(cg.length > 0) return {displayCategory:'떱헬(술사+술사)', members:[u1,u2], commonGrounds:cg};
+    const pool=list.filter(u=>cats(u).includes('차균'));
+    const gyeoks=pool.filter(u=>u.job==='전사'||u.job==='도적');
+    const dosas=pool.filter(u=>u.job==='도사');
+    for(const gyeok of gyeoks){
+      for(const dosa of dosas){
+        if(gyeok._id===dosa._id) continue;
+        if(checkSpecsAndBlacklist(gyeok,dosa)){
+          const bothNative = isNative(gyeok,'차균') && isNative(dosa,'차균');
+          if(bothNative){
+            const cg=(gyeok.huntingGrounds||[]).filter(g=>(dosa.huntingGrounds||[]).includes(g));
+            if(cg.length) return{displayCategory:'차균',members:[gyeok,dosa],commonGrounds:cg};
+          } else {
+            // 교차 카테고리 차균 매칭 → 단수 체크 없음
+            return{displayCategory:'차균',members:[gyeok,dosa],commonGrounds:[]};
           }
         }
       }
     }
   }
+  // 격도1대1 (교차 카테고리 포함)
+  {
+    const pool=list.filter(u=>cats(u).includes('격도1대1'));
+    for(const u1 of pool){
+      if(u1.job==='도사') continue;
+      const u2=pool.find(x=>{
+        if(x.job!=='도사'||x._id===u1._id) return false;
+        if(!checkSpecsAndBlacklist(u1,x)) return false;
+        const hasCrossCha = isCrossChagyoon(u1) || isCrossChagyoon(x);
+        if(hasCrossCha) return true;
+        const cg=(u1.huntingGrounds||[]).filter(g=>(x.huntingGrounds||[]).includes(g));
+        return cg.length > 0;
+      });
+      if(u2){
+        const cg=(u1.huntingGrounds||[]).filter(g=>(u2.huntingGrounds||[]).includes(g));
+        return{displayCategory:'격도(1대1)',members:[u1,u2],commonGrounds:cg};
+      }
+    }
+  }
+  // 레이드 격도1대1
+  {
+    const pool=list.filter(u=>u.category==='레이드'&&u.raidType==='격도1대1');
+    for(const u1 of pool){
+      if(u1.job==='도사') continue;
+      const u2=pool.find(x=>x.job==='도사'&&x.raidBoss===u1.raidBoss&&x._id!==u1._id&&checkSpecsAndBlacklist(u1,x));
+      if(u2) return{displayCategory:`레이드-${u1.raidBoss}(1대1)`,members:[u1,u2],commonGrounds:[]};
+    }
+  }
+  // 떱헬
+  {
+    const pool=list.filter(u=>u.category==='떱헬'&&u.job==='주술사');
+    if(pool.length>=2){
+      for(let i=0;i<pool.length;i++)
+        for(let j=i+1;j<pool.length;j++){
+          const u1=pool[i],u2=pool[j];
+          if(checkSpecsAndBlacklist(u1,u2)){
+            const cg=(u1.huntingGrounds||[]).filter(g=>(u2.huntingGrounds||[]).includes(g));
+            if(cg.length) return{displayCategory:'떱헬(술사+술사)',members:[u1,u2],commonGrounds:cg};
+          }
+        }
+    }
+  }
+  // 흉가노노
   {
     const pool=list.filter(u=>u.category==='흉가노노');
     const a=pool.find(u=>u.hyunggaRole==='격수'),d=pool.find(u=>u.hyunggaRole==='도사'&&u!==a);
-    if(a&&d&&checkSpecsAndBlacklist(a,d))return{displayCategory:'흉가노노',members:[a,d],commonGrounds:[]};
+    if(a&&d&&checkSpecsAndBlacklist(a,d)) return{displayCategory:'흉가노노',members:[a,d],commonGrounds:[]};
   }
+  // 레이드 격도술 3인 솔로
   {
     const pool=list.filter(u=>u.category==='레이드'&&u.raidType==='격도술');
     const bosses=[...new Set(pool.map(u=>u.raidBoss))];
@@ -846,42 +1074,54 @@ function findParty(list){
       }
     }
   }
-  // 반반밀대/밀격쩔 일행있음: 리더(2인)+솔로 = 3인 매칭
+  // 반반밀대/밀격쩔 일행있음
   {
     const cats2=['반반밀대','밀격쩔'];
     for(const cat of cats2){
       const leaders=list.filter(u=>u.category===cat&&u.hasParty);
       const solos=list.filter(u=>u.category===cat&&!u.hasParty);
-      for(const leader of leaders){
-        for(const third of solos){
+      for(const leader of leaders)
+        for(const third of solos)
           if(checkSpecsAndBlacklist(leader,third)){
             const cg=(leader.huntingGrounds||[]).filter(g=>(third.huntingGrounds||[]).includes(g));
             if(cg.length) return{displayCategory:cat,members:[leader,makeCompanionEntry(leader),third],commonGrounds:cg};
           }
-        }
-      }
     }
   }
+  // 격도술 3인 솔로 (교차 카테고리 포함)
   {
-    const cats=['격도술','반반밀대','밀격쩔'];
-    for(const cat of cats){
-      // 일행있음 리더는 위에서 처리했으므로 제외
-      const same=list.filter(u=>u.category===cat&&!u.hasParty);
-      if(same.length>=3){
-        for(let i=0;i<same.length;i++)
-          for(let j=i+1;j<same.length;j++)
-            for(let k=j+1;k<same.length;k++){
-              const p1=same[i],p2=same[j],p3=same[k];
-              if(checkSpecsAndBlacklist(p1,p2,p3)){
-                let cg=[];
-                if(p1.huntingGrounds&&p1.huntingGrounds.length){
-                  cg=p1.huntingGrounds.filter(g=>(p2.huntingGrounds||[]).includes(g)&&(p3.huntingGrounds||[]).includes(g));
-                  if(!cg.length) continue;
-                }
-                return{displayCategory:cat,members:[p1,p2,p3],commonGrounds:cg};
-              }
+    const pool=list.filter(u=>cats(u).includes('격도술')&&!(u.category==='격도술'&&u.hasParty));
+    if(pool.length>=3){
+      for(let i=0;i<pool.length;i++)
+        for(let j=i+1;j<pool.length;j++)
+          for(let k=j+1;k<pool.length;k++){
+            const p1=pool[i],p2=pool[j],p3=pool[k];
+            if(!checkSpecsAndBlacklist(p1,p2,p3)) continue;
+            const hasCrossCha=[p1,p2,p3].some(isCrossChagyoon);
+            if(hasCrossCha){
+              return{displayCategory:'격도술',members:[p1,p2,p3],commonGrounds:[]};
             }
-      }
+            const cg=(p1.huntingGrounds||[]).filter(g=>
+              (p2.huntingGrounds||[]).includes(g)&&(p3.huntingGrounds||[]).includes(g));
+            if(cg.length) return{displayCategory:'격도술',members:[p1,p2,p3],commonGrounds:cg};
+          }
+    }
+  }
+  // 반반밀대/밀격쩔 3인 솔로
+  {
+    const milCats=['반반밀대','밀격쩔'];
+    for(const cat of milCats){
+      const pool=list.filter(u=>u.category===cat&&!u.hasParty);
+      if(pool.length>=3)
+        for(let i=0;i<pool.length;i++)
+          for(let j=i+1;j<pool.length;j++)
+            for(let k=j+1;k<pool.length;k++){
+              const p1=pool[i],p2=pool[j],p3=pool[k];
+              if(!checkSpecsAndBlacklist(p1,p2,p3)) continue;
+              const cg=(p1.huntingGrounds||[]).filter(g=>
+                (p2.huntingGrounds||[]).includes(g)&&(p3.huntingGrounds||[]).includes(g));
+              if(cg.length) return{displayCategory:cat,members:[p1,p2,p3],commonGrounds:cg};
+            }
     }
   }
   return null;
@@ -947,6 +1187,7 @@ function updateQueueDisplay(){
   document.getElementById('qCount').textContent=waitingQueue.length;
   if(!waitingQueue.length){L.innerHTML='<div class="empty">대기 중인 인원이 없습니다.</div>';return;}
   L.innerHTML='';
+  const now = Date.now();
   waitingQueue.forEach((u)=>{
     let sub=u.detailsStr;
     if(u.huntingGrounds&&u.huntingGrounds.length)
@@ -960,15 +1201,32 @@ function updateQueueDisplay(){
       const statLabel=isSl?'체력':'마력';
       return `<div style="margin-top:4px;font-size:12.5px;color:var(--paper-dim);">👥 일행: ${jobBadge(m.job)} <b>${m.nick}</b>${m.stat&&m.stat!=='0'?` · ${statLabel} ${m.stat}만`:''}</div>`;
     })() : '';
+    const altCatsHtml = u.alternativeCategories && u.alternativeCategories.length
+      ? `<div style="margin-top:3px;font-size:12px;color:var(--gold-soft);">✓ ${u.alternativeCategories.join(' / ')} 가능</div>`
+      : '';
     const isMyEntry = userIp ? u._ip === userIp : false;
+    let expiryHtml = '';
+    if(isMyEntry && u.ts) {
+      const remaining = QUEUE_EXPIRE_MS - (now - u.ts);
+      if(remaining > 0) {
+        const mins = Math.floor(remaining / 60000);
+        const secs = Math.floor((remaining % 60000) / 1000);
+        expiryHtml = `<div style="margin-top:3px;font-size:11.5px;color:var(--paper-faint);">⏳ ${mins}분 ${secs}초 후 만료</div>`;
+      }
+    }
     d.innerHTML=`
       <div style="flex:1;min-width:0;">
         <div><span class="nm">${u.nick}</span>${jobBadge(u.job)}</div>
         <div class="stat">체력 ${u.hp}만 · 마력 ${u.mp}만 <span style="color:var(--gold-soft);">(${u.playTime||'30분'})</span></div>
         ${companionHtml}
         <div class="mode">➔ ${u.category} <span style="color:var(--paper-dim);">[${sub}]</span></div>
+        ${altCatsHtml}
+        ${expiryHtml}
       </div>
-      ${isMyEntry?`<button class="x-btn" onclick="cancelQueue('${u._id}')" title="대기 취소">×</button>`:''}` ;
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;">
+        ${isMyEntry?`<button class="refresh-btn" onclick="refreshQueue('${u._id}')" title="30분 연장">↺ 갱신</button>`:''}
+        ${isMyEntry?`<button class="x-btn" onclick="cancelQueue('${u._id}')" title="대기 취소">×</button>`:''}
+      </div>`;
     L.appendChild(d);
   });
 }

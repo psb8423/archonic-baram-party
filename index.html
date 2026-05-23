@@ -109,6 +109,13 @@
               </div>
             </div>
             <div style="margin-top:14px;border-top:1px dashed var(--line-soft);padding-top:12px;">
+              <label class="lbl" style="margin-bottom:8px;color:var(--paper-dim);">다른 구인 형태도 가능 <span style="font-weight:500;font-size:13px;">(복수 선택 시 해당 형태로도 매칭)</span></label>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+                <label class="chip" style="max-width:fit-content;padding:8px 14px;gap:6px;"><input type="checkbox" name="altCatGyukdo" value="격도1대1"> 격도 1:1 가능</label>
+                <label class="chip" style="max-width:fit-content;padding:8px 14px;gap:6px;"><input type="checkbox" name="altCatGyukdo" value="차균"> 차균 가능</label>
+              </div>
+            </div>
+            <div style="border-top:1px dashed var(--line-soft);padding-top:12px;">
               <label class="chip" style="display:inline-flex;gap:8px;max-width:fit-content;padding:10px 14px;">
                 <input type="checkbox" id="hasPartyGyukdo" onchange="toggleCompanionPanel('Gyukdo')">
                 <span>👥 일행 있음 (2인 입장)</span>
@@ -158,6 +165,13 @@
                   <label><input type="radio" name="mildae1on1" value="O">O</label>
                   <label class="sel"><input type="radio" name="mildae1on1" value="X" checked>X</label>
                 </div>
+              </div>
+            </div>
+            <div style="margin-top:14px;border-top:1px dashed var(--line-soft);padding-top:12px;">
+              <label class="lbl" style="margin-bottom:8px;color:var(--paper-dim);">다른 구인 형태도 가능 <span style="font-weight:500;font-size:13px;">(복수 선택 시 해당 형태로도 매칭)</span></label>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <label class="chip" style="max-width:fit-content;padding:8px 14px;gap:6px;"><input type="checkbox" name="altCat1on1" value="격도술"> 격도술도 가능</label>
+                <label class="chip" style="max-width:fit-content;padding:8px 14px;gap:6px;"><input type="checkbox" name="altCat1on1" value="차균"> 차균 가능</label>
               </div>
             </div>
           </div>
@@ -236,6 +250,13 @@
               <label class="chip"><input type="checkbox" value="46~47단">46~47단</label>
               <label class="chip"><input type="checkbox" value="48단 이상">48단 이상</label>
               <label class="chip"><input type="checkbox" value="50단 이상">50단 이상</label>
+            </div>
+            <div style="margin-top:14px;border-top:1px dashed var(--line-soft);padding-top:12px;">
+              <label class="lbl" style="margin-bottom:8px;color:var(--paper-dim);">다른 구인 형태도 가능 <span style="font-weight:500;font-size:13px;">(복수 선택 시 해당 형태로도 매칭)</span></label>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <label class="chip" style="max-width:fit-content;padding:8px 14px;gap:6px;"><input type="checkbox" name="altCatChagyoon" value="격도술"> 격도술도 가능</label>
+                <label class="chip" style="max-width:fit-content;padding:8px 14px;gap:6px;"><input type="checkbox" name="altCatChagyoon" value="격도1대1"> 격도 1:1 가능</label>
+              </div>
             </div>
           </div>
 
@@ -333,6 +354,7 @@
           <span class="queue-count" id="qCount">0</span>
         </div>
         <div class="panel-b">
+          <div class="queue-notice">⏳ 등록 후 <b>30분</b>이 지나면 자동으로 대기열에서 제거됩니다. <b>↺ 갱신</b> 버튼으로 30분씩 연장 가능합니다.</div>
           <div id="queueList" class="qlist">
             <div class="empty">대기 중인 인원이 없습니다.</div>
           </div>
@@ -357,6 +379,27 @@
   <div class="footnote">
     옛날바람 · 메이플랜드 콘텐츠 ·
     <a href="https://www.youtube.com/@archonic00" target="_blank" rel="noopener">youtube.com/@archonic00</a>
+  </div>
+</div>
+
+<div id="pendingModal" class="modal-overlay">
+  <div class="modal-box" style="border-color:var(--gold);box-shadow:0 12px 50px rgba(0,0,0,0.8),0 0 20px rgba(223,182,91,0.2);">
+    <div class="modal-header">
+      <h2 class="modal-title" style="color:var(--gold);">⚔️ 파티 매칭 대기</h2>
+      <div class="modal-subtitle" id="pendingModalCat">매칭이 성사되었습니다!</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-party-list" id="pendingModalList"></div>
+      <div id="pendingModalDest" style="margin-top:10px;font-size:14px;color:var(--paper-dim);"></div>
+      <div style="text-align:center;margin-top:16px;">
+        <div style="font-size:28px;font-weight:900;color:var(--gold);font-family:'Song Myung',serif;" id="pendingTimer">60초</div>
+        <div style="font-size:13px;color:var(--paper-dim);margin-top:4px;">내에 수락하지 않으면 <b>파티 이미 구함</b>으로 자동 처리됩니다.</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:4px;">
+      <button class="modal-close-btn" style="flex:1;" onclick="acceptPending()">✓ 수락</button>
+      <button class="modal-close-btn" style="flex:1;background:linear-gradient(180deg,#e08060,#a04030);border-color:var(--cinnabar);box-shadow:0 4px 12px rgba(220,91,64,0.25);" onclick="declinePending()">✗ 파티 이미 구함</button>
+    </div>
   </div>
 </div>
 

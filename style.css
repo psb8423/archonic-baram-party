@@ -447,3 +447,20 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
 .admin-score.banned{color:var(--cinnabar);}
 .admin-score.warned{color:var(--gold);}
 .admin-btn-row{display:flex;gap:6px;flex-shrink:0;}
+
+/* ── 대기열 공지 ── */
+.queue-notice{
+  font-size:12.5px;color:var(--paper-faint);text-align:center;
+  padding:8px 4px 12px;border-bottom:1px dashed var(--line-soft);margin-bottom:12px;
+  font-family:'Gowun Batang',serif;line-height:1.6;
+}
+.queue-notice b{color:var(--gold);}
+
+/* ── 갱신 버튼 ── */
+.refresh-btn{
+  background:rgba(223,182,91,.1);border:1px solid rgba(223,182,91,.4);
+  color:var(--gold);padding:4px 10px;border-radius:5px;
+  cursor:pointer;font-size:12.5px;font-weight:700;font-family:inherit;
+  transition:all .14s;white-space:nowrap;
+}
+.refresh-btn:hover{background:rgba(223,182,91,.25);}
