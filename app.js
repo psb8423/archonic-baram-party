@@ -109,13 +109,23 @@ function applyBanUi(){
 
 function reportFakeMatch(matchKey) {
   if(!FB_OK) return;
-  const rawNick = prompt("⚠️ 신고 안내\n\n신고할 대상의 닉네임을 입력하세요.");
-  if(!rawNick || !rawNick.trim()) { toast("신고가 취소되었습니다.", "info"); return; }
-  const targetNick = rawNick.trim();
 
-  const reasonInput = prompt(`[${targetNick}] 신고 사유를 선택하세요:\n1 = 사칭\n2 = 비매너\n3 = 허위 매칭\n(또는 직접 입력)`);
+  // 매칭 멤버 목록 안내
+  const matchData = matchedParties.find(p => p._id === matchKey);
+  const memberInfo = matchData ? `\n매칭 멤버: ${matchData.members.map(m=>m.nick).join(', ')}` : '';
+
+  const reasonInput = prompt(`⚠️ 신고 사유를 선택하세요:${memberInfo}\n\n1 = 사칭\n2 = 비매너\n3 = 허위 매칭\n(또는 직접 입력)`);
   if(!reasonInput) { toast("신고가 취소되었습니다.", "info"); return; }
   const reason = {'1':'사칭','2':'비매너','3':'허위 매칭'}[reasonInput.trim()] || reasonInput.trim();
+
+  // 사칭 아이디: 매칭에 표시된 가짜 이름 (피해자)
+  const shownNickRaw = prompt(`[${reason}] 신고\n\n① 사칭 아이디 입력\n매칭 카드에 표시된 닉네임을 입력하세요.\n(실제로 사칭당한 피해자 이름 / 모르면 공란)`);
+  const shownNick = shownNickRaw ? shownNickRaw.trim() : '';
+
+  // 실제 아이디: 차단 대상이 될 실제 범인
+  const realNickRaw = prompt(`[${reason}] 신고\n\n② 실제 아이디 입력\n실제로 신고할 대상의 아이디를 입력하세요.\n(이 아이디를 기준으로 차단됩니다)`);
+  if(!realNickRaw || !realNickRaw.trim()) { toast("신고가 취소되었습니다.", "info"); return; }
+  const targetNick = realNickRaw.trim();
 
   db.ref('queue_ips').child(targetNick).once('value', snap => {
     let targetIp = snap.val();
@@ -124,7 +134,15 @@ function reportFakeMatch(matchKey) {
       if(found && found._ip) targetIp = found._ip;
     }
 
-    db.ref('reports').push({ targetNick, targetIp: targetIp||'unknown', reporterIp: userIp||'unknown', reason, matchKey, ts: Date.now() });
+    const reporterNick = document.getElementById('userNick').value.trim() || '(미입력)';
+    db.ref('reports').push({
+      targetNick,
+      shownNick: shownNick || null,
+      targetIp: targetIp||'unknown',
+      reporterNick,
+      reporterIp: userIp||'unknown',
+      reason, matchKey, ts: Date.now()
+    });
 
     if(targetIp) {
       const safeKey = targetIp.replace(/\./g, '_');
@@ -138,7 +156,8 @@ function reportFakeMatch(matchKey) {
         const finalScore = calcDecayedScore(result.snapshot.val());
         if(finalScore >= 1.0) {
           db.ref('blacklist_ips').child(safeKey).set({ ip: targetIp, estimatedNick: targetNick, ts: Date.now(), source: 'penalty' });
-          toast(`[<b>${targetNick}</b>] 누적 신고로 즉시 차단 처리되었습니다.`, 'warn');
+          const extra = shownNick ? ` (사칭 아이디: ${shownNick})` : '';
+          toast(`[<b>${targetNick}</b>]${extra} 누적 신고로 즉시 차단 처리되었습니다.`, 'warn');
         } else {
           toast(`[<b>${targetNick}</b>] 신고 접수 완료. 누적 시 자동 차단됩니다.`, 'warn');
         }
@@ -153,6 +172,7 @@ function reportFakeMatch(matchKey) {
 function listenAdminBlacklist() {
   if(!FB_OK || !isAdminAuthenticated) return;
   const listContainer = document.getElementById('adminBanList');
+  const reportContainer = document.getElementById('adminReportList');
 
   db.ref('users_penalty').on('value', snap => {
     const data = snap.val() || {};
@@ -181,6 +201,33 @@ function listenAdminBlacklist() {
           <div class="admin-btn-row">
             <button class="admin-unban-btn" onclick="adminResetPenalty('${e.key}','${nick}')">점수 초기화</button>
             ${isBanned ? `<button class="admin-unban-btn" onclick="removeIpBanFromServer('${e.key}','${nick}')">차단 해제</button>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  });
+
+  // 신고 내역 (최근 30건)
+  db.ref('reports').orderByChild('ts').limitToLast(30).on('value', snap => {
+    const data = snap.val();
+    if(!data) {
+      reportContainer.innerHTML = '<div class="empty" style="padding:10px 0;">신고 내역이 없습니다.</div>';
+      return;
+    }
+    const list = Object.values(data).sort((a, b) => (b.ts||0) - (a.ts||0));
+    reportContainer.innerHTML = list.map(r => {
+      const d = r.ts ? new Date(r.ts) : null;
+      const timeStr = d ? `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}` : '–';
+      const shownPart = r.shownNick ? `<span style="color:var(--paper-faint);font-size:12px;"> (사칭 아이디: ${r.shownNick})</span>` : '';
+      return `
+        <div class="admin-report-item">
+          <div style="font-size:13px;color:var(--paper-dim);margin-bottom:3px;">${timeStr} · <b style="color:var(--cinnabar);">${r.reason||'–'}</b></div>
+          <div style="font-size:13.5px;">
+            신고자: <b style="color:var(--jade);">${r.reporterNick||'(미입력)'}</b>
+            <span style="color:var(--paper-faint);font-size:12px;"> / ${r.reporterIp||'–'}</span>
+          </div>
+          <div style="font-size:13.5px;margin-top:2px;">
+            대상: <b style="color:var(--gold);">${r.targetNick||'–'}</b>${shownPart}
           </div>
         </div>
       `;

@@ -448,6 +448,41 @@ input::placeholder{color:var(--paper-faint);font-size:15px;}
 .admin-score.warned{color:var(--gold);}
 .admin-btn-row{display:flex;gap:6px;flex-shrink:0;}
 
+/* ── 광고 카드 ── */
+.ad-card {
+  display: block; text-decoration: none;
+  background: linear-gradient(135deg, #1e1a12, #262015);
+  border: 1px solid var(--gold-soft); border-radius: 10px;
+  padding: 18px 22px; margin-top: 0;
+  box-shadow: 0 4px 20px rgba(0,0,0,.4), inset 0 1px 0 rgba(223,182,91,.08);
+  transition: border-color .18s, box-shadow .18s, transform .15s;
+}
+.ad-card:hover {
+  border-color: var(--gold);
+  box-shadow: 0 6px 28px rgba(0,0,0,.5), 0 0 12px rgba(223,182,91,.15);
+  transform: translateY(-2px);
+}
+.ad-label {
+  font-size: 11.5px; font-weight: 900; letter-spacing: .12em;
+  color: var(--gold-soft); text-transform: uppercase;
+  font-family: 'Gowun Batang', serif; margin-bottom: 8px;
+}
+.ad-title {
+  font-family: 'Song Myung', serif; font-size: clamp(15px, 2.2vw, 18px);
+  color: var(--paper); line-height: 1.55; margin-bottom: 10px;
+}
+.ad-link {
+  font-size: 13px; color: var(--gold); font-weight: 700;
+  font-family: 'Gowun Batang', serif; letter-spacing: .04em;
+}
+
+/* 신고 내역 항목 */
+.admin-report-item {
+  background: var(--ink-2); border: 1px solid var(--line-soft);
+  border-radius: 6px; padding: 10px 14px; margin-bottom: 6px;
+}
+.admin-report-item:last-child { margin-bottom: 0; }
+
 /* ── 대기열 공지 ── */
 .queue-notice{
   font-size:12.5px;color:var(--paper-faint);text-align:center;
