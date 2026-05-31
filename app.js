@@ -316,7 +316,7 @@ function initConn(){
   const txt=document.getElementById('connText');
   if(!FB_OK){box.className='conn down';txt.textContent='서버 모듈 로드 실패';return;}
   db.ref('.info/connected').on('value',s=>{
-    if(s.val()===true){box.className='conn live';txt.textContent='실시간 연결됨 · 문파 공유 중';}
+    if(s.val()===true){box.className='conn live';txt.textContent='실시간 연결됨 · 유저 공유 중 (테스트 기간)';}
     else{box.className='conn down';txt.textContent='서버 연결 끊김 · 재연결 시도 중';}
   });
   const unlockAudioContext = () => {
@@ -725,11 +725,12 @@ function closeMatchModal(){
 
 function togglePanels(){
   const c=document.getElementById('mainCategory').value;
-  ['panelGyukdo','panelGyukdo1on1','panelDdubHell','panelMilgyeok','panelHyungga','panelChagyoon','panelRaid']
+  ['panelGyukdo','panelGyukdo1on1','panelDdubHell','panelUnder99','panelMilgyeok','panelHyungga','panelChagyoon','panelRaid']
     .forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.remove('on'); });
   if(c==='격도술')document.getElementById('panelGyukdo').classList.add('on');
   else if(c==='격도1대1')document.getElementById('panelGyukdo1on1').classList.add('on');
   else if(c==='떱헬')document.getElementById('panelDdubHell').classList.add('on');
+  else if(c==='99이하')document.getElementById('panelUnder99').classList.add('on');
   else if(c==='반반밀대'||c==='밀격쩔')document.getElementById('panelMilgyeok').classList.add('on');
   else if(c==='흉가노노')document.getElementById('panelHyungga').classList.add('on');
   else if(c==='차균')document.getElementById('panelChagyoon').classList.add('on');
@@ -778,6 +779,9 @@ function registerUser(){
     mildae=document.querySelector('input[name=mildae1on1]:checked').value;
     details.push(`경쿠:${expBuff}`,`밀대:${mildae}`);
     document.querySelectorAll('input[name=altCat1on1]:checked').forEach(cb=>alternativeCategories.push(cb.value));
+  }else if(category==='99이하'){
+    document.querySelectorAll('#panelUnder99 input[type=checkbox]:checked').forEach(cb=>huntingGrounds.push(cb.value));
+    if(!huntingGrounds.length){toast('사냥터를 하나 이상 선택해주세요.','warn');return;}
   }else if(category==='떱헬'){
     document.querySelectorAll('#panelDdubHell input[type=checkbox]:checked').forEach(cb=>huntingGrounds.push(cb.value));
     if(!huntingGrounds.length){toast('사냥터를 하나 이상 선택해주세요.','warn');return;}
@@ -1039,6 +1043,35 @@ function findParty(list){
       if(u2) return{displayCategory:`레이드-${u1.raidBoss}(1대1)`,members:[u1,u2],commonGrounds:[]};
     }
   }
+  // 99이하: 술사+술사 2인
+  {
+    const pool=list.filter(u=>u.category==='99이하'&&u.job==='주술사');
+    if(pool.length>=2){
+      for(let i=0;i<pool.length;i++)
+        for(let j=i+1;j<pool.length;j++){
+          const u1=pool[i],u2=pool[j];
+          if(checkSpecsAndBlacklist(u1,u2)){
+            const cg=(u1.huntingGrounds||[]).filter(g=>(u2.huntingGrounds||[]).includes(g));
+            if(cg.length) return{displayCategory:'99이하(술사+술사)',members:[u1,u2],commonGrounds:cg};
+          }
+        }
+    }
+  }
+  // 99이하: 격수(전사·도적)+도사 2인
+  {
+    const pool=list.filter(u=>u.category==='99이하');
+    const gyeoks=pool.filter(u=>u.job==='전사'||u.job==='도적');
+    const dosas=pool.filter(u=>u.job==='도사');
+    for(const gyeok of gyeoks){
+      for(const dosa of dosas){
+        if(gyeok._id===dosa._id) continue;
+        if(checkSpecsAndBlacklist(gyeok,dosa)){
+          const cg=(gyeok.huntingGrounds||[]).filter(g=>(dosa.huntingGrounds||[]).includes(g));
+          if(cg.length) return{displayCategory:'99이하(격수+도사)',members:[gyeok,dosa],commonGrounds:cg};
+        }
+      }
+    }
+  }
   // 떱헬
   {
     const pool=list.filter(u=>u.category==='떱헬'&&u.job==='주술사');
@@ -1298,9 +1331,21 @@ function updateMatchedDisplay(){
   });
 }
 
+function closeFirstVisitModal() {
+  localStorage.setItem('baram_notice_seen', '1');
+  document.getElementById('firstVisitModal').classList.remove('open');
+}
+
+function showFirstVisitNotice() {
+  if(!localStorage.getItem('baram_notice_seen')) {
+    document.getElementById('firstVisitModal').classList.add('open');
+  }
+}
+
 initBindings();
 syncJobColor();
 updateQueueDisplay();
 updateMatchedDisplay();
 initConn();
 subscribe();
+showFirstVisitNotice();
