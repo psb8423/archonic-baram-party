@@ -829,6 +829,11 @@ function registerUser(){
   }else if(category==='99이하'){
     document.querySelectorAll('#panelUnder99 input[type=checkbox]:checked').forEach(cb=>huntingGrounds.push(cb.value));
     if(!huntingGrounds.length){toast('사냥터를 하나 이상 선택해주세요.','warn');return;}
+    const under99Level = document.getElementById('under99Level').value || '';
+    const chiljiYn = document.querySelector('input[name=chiljiYn]:checked')?.value || 'X';
+    const heroWeaponYn = document.querySelector('input[name=heroWeaponYn]:checked')?.value || 'X';
+    if(under99Level) details.push(`레벨:${under99Level}`);
+    details.push(`칠지도:${chiljiYn}`, `영웅격무기:${heroWeaponYn}`);
   }else if(category==='떱헬'){
     document.querySelectorAll('#panelDdubHell input[type=checkbox]:checked').forEach(cb=>huntingGrounds.push(cb.value));
     if(!huntingGrounds.length){toast('사냥터를 하나 이상 선택해주세요.','warn');return;}

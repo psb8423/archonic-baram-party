@@ -180,11 +180,34 @@
           <div id="panelUnder99" class="dyn">
             <label class="lbl">사냥터 선택 <span style="color:var(--paper-dim);font-weight:700;">(중복 가능)</span></label>
             <div class="chips">
-              <label class="chip"><input type="checkbox" value="쥐굴~사슴굴"><img src="mouse.gif" alt="쥐굴~사슴굴"><span>쥐굴~사슴굴</span></label>
-              <label class="chip"><input type="checkbox" value="돼지굴"><img src="pig.gif" alt="돼지굴"><span>돼지굴</span></label>
-              <label class="chip"><input type="checkbox" value="문어굴~해마굴"><img src="octo.gif" alt="문어굴~해마굴"><span>문어굴~해마굴</span></label>
+              <label class="chip"><input type="checkbox" value="쥐굴~사슴굴">쥐굴~사슴굴</label>
+              <label class="chip"><input type="checkbox" value="돼지굴">돼지굴</label>
+              <label class="chip"><input type="checkbox" value="문어굴~해마굴">문어굴~해마굴</label>
               <label class="chip img-chip"><input type="checkbox" value="숲지대"><img src="forest.gif" alt="숲지대"><span>숲지대</span></label>
-              <label class="chip img-chip"><input type="checkbox" value="이가닌자의 방"><img src="leeganinja.gif" alt="이가닌자의 방"><span>이가닌자의 방</span></label>
+              <label class="chip img-chip"><input type="checkbox" value="이가닌자의 방"><img src="ninja.gif" alt="이가닌자의 방"><span>이가닌자의 방</span></label>
+            </div>
+            <div class="two-col" style="margin-top:14px;">
+              <div>
+                <div class="seg-label">내 레벨</div>
+                <input type="number" id="under99Level" placeholder="예) 85" min="1" max="99">
+              </div>
+              <div></div>
+            </div>
+            <div class="two-col" style="margin-top:12px;">
+              <div>
+                <div class="seg-label">칠지도 여부</div>
+                <div class="seg">
+                  <label><input type="radio" name="chiljiYn" value="O">O</label>
+                  <label class="sel"><input type="radio" name="chiljiYn" value="X" checked>X</label>
+                </div>
+              </div>
+              <div>
+                <div class="seg-label">영웅의길 격무기</div>
+                <div class="seg">
+                  <label><input type="radio" name="heroWeaponYn" value="O">O</label>
+                  <label class="sel"><input type="radio" name="heroWeaponYn" value="X" checked>X</label>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -363,9 +386,12 @@
       </div>
 
       <a href="https://novel.munpia.com/566397" target="_blank" rel="noopener" class="ad-card">
-        <div class="ad-label">ARCHONIC 작품</div>
-        <div class="ad-title">아카닉이 쓴 경영물 소설이<br>궁금하다면?</div>
-        <div class="ad-link">novel.munpia.com →</div>
+        <div class="ad-content">
+          <div class="ad-label">ARCHONIC 작품</div>
+          <div class="ad-title">아카닉이 쓴 경영물 소설이<br>궁금하다면?</div>
+          <div class="ad-link">novel.munpia.com →</div>
+        </div>
+        <img src="novel-cover.jpg" alt="저울의 영주" class="ad-cover-img">
       </a>
     </div>
 
